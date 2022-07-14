@@ -1,0 +1,21 @@
+runner:
+  n_epochs: 200
+  total_steps: 632600
+  gradient_clipping: 10.0
+  gradient_accumulate_steps: 1
+  log_step: 1000
+  save_step: 1000
+  max_keep: 5
+  fp16: false
+optimizer:
+  name: TorchOptim
+  torch_optim_name: Adam
+  lr: 0.0001
+  betas: [0.9, 0.999]
+  eps: 1.0e-08
+  weight_decay: 0
+datarc:
+  num_workers: 8
+  train_batch_size: 32
+  max_timestep: -320
+  sets: ['/path/to/libri-360.csv']
