@@ -1,3 +1,9 @@
+"""
+    Training interface of MelHuBERT.
+    Author: Tzu-Quan Lin (https://github.com/nervjack2)
+    Reference: (https://github.com/s3prl/s3prl/blob/master/s3prl/pretrain/runner.py)
+    Reference author: Andy T. Liu (https://github.com/andi611)
+"""
 import os
 import math
 import glob

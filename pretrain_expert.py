@@ -1,3 +1,7 @@
+"""
+    Training interface of MelHuBERT.
+    Author: Tzu-Quan Lin (https://github.com/nervjack2)
+"""
 import yaml
 
 import torch
@@ -76,7 +80,6 @@ class MelHuBERTPretrainer(nn.Module):
         )
         return dataloader
 
-    # Interface
     def load_model(self, init_ckpt):
         assert 'Model' in init_ckpt
         if self.multi_gpu:
