@@ -47,7 +47,7 @@ class MelHuBERTPretrainer(nn.Module):
         if self.initial_weight:
             all_states = torch.load(self.initial_weight, map_location="cpu")
             try:             
-                self.model.load_state_dict(all_states["model"])
+                self.model.load_state_dict(all_states["Model"])
                 print(f'[MelHuBERTPretrainer] Load initilization model weight from {self.initial_weight}')
             except:
                 raise NotImplementedError('Could not load the initilization weight')

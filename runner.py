@@ -30,7 +30,7 @@ class Runner():
         # Load resume training weight from previous experiment
         if self.resume_ckpt != {}:
             print(f'[Runner] - Loading upstream weights from the previous experiment from {self.args.past_exp}')
-            melhubert.load_model(self.resume_ckpt)
+            self.melhubert.load_model(self.resume_ckpt)
 
     def _get_optimizer(self, model):
         from torch.optim import Adam
@@ -73,7 +73,8 @@ class Runner():
             print(f'[Runner] - Training for {total_steps} steps, which is approximately {n_epochs} epochs')
         # Save checkpoint for every n epochs
         save_every_x_epochs = int(self.runner_config['runner'].get('save_every_x_epochs', -1))
-        if save_every_x_epochs != -1:
+        assert save_every_x_epochs == -1 or n_epochs > 0
+        if save_every_x_epochs != -1 and n_epochs > 0:
             step_per_epoch = int(total_steps//n_epochs)
 
         assert self.runner_config['runner']['total_steps'] > self.runner_config['runner']['log_step']
