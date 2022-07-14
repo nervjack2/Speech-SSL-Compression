@@ -15,8 +15,8 @@ This is the implementation of HuBERT which takes fbank feature as input. And its
     ```
     Where KALDI_DATA_DIR is the directory you will get after decompressing in step 1. OUT_NUMPY_DIR is the output directory of numpy data array. DATA_CSV_FILE is the file recording data path and its corresponding label path which will be used in pre-trianing phase. 
     
-    Note-1: Please use absolute path when running the command.
-    Note-2: The mean and standard variance of libri-360 will be saved at OUT_NUMPY_DIR/mean-std.npy. This will be useful if you are going to test the downstream performance of MelHuBERT trained by yourself
+    Note-1: Please use absolute path when running the command. \
+    Note-2: The mean and standard variance of libri-360 will be saved at OUT_NUMPY_DIR/mean-std.npy. This will be useful if you are going to test the downstream performance of MelHuBERT trained by yourself \
     Note-3: This script will do normalization automatically for you.
 
 3. Adjust your pre-training config file:
@@ -42,8 +42,8 @@ This is the implementation of HuBERT which takes fbank feature as input. And its
     ```
     Where KALDI_FBANK_DIR is **libri-960/fbank**, KALDI_KMEANS_DIR is **libri-960/kmeans**. OUT_NUMPY_DIR is the output directory of numpy data array. DATA_CSV_FILE is the file recording data path and its corresponding label path which will be used in stage 1 pre-trianing phase. 
     
-    Note-1: Please use absolute path when running the command.
-    Note-2: The mean and standard variance of libri-360 will be saved at OUT_NUMPY_DIR/mean-std.npy. This will be useful if you are going to test the downstream performance of MelHuBERT trained by yourself
+    Note-1: Please use absolute path when running the command. \
+    Note-2: The mean and standard variance of libri-360 will be saved at OUT_NUMPY_DIR/mean-std.npy. This will be useful if you are going to test the downstream performance of MelHuBERT trained by yourself \
     Note-3: This script will do normalization automatically for you.
 
 3. Adjust your pre-training config file:
