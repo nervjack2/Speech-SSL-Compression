@@ -132,6 +132,6 @@ Downsampled the feature to half length will lead to a better performance on phon
 |                  Model name                  | Params | Phone Recognition(PER%) | Speaker Identificaiton(ACC%) |
 |:--------------------------------------------:|:------:|:--------------------------:|:-----------------------:|
 |melhubert-stage2-libri960-100epochs.ckpt|~90M|9.77|69.51|
-|melhubert-stage2-libri960-100epochs.ckpt + downsampled by half|7.94|70.4|
+|melhubert-stage2-libri960-100epochs.ckpt + downsampled by half|~90M|7.94|70.4|
 ### Notes 
 - melhubert-stage2-libri360-100epochs-oldmask.ckpt is trained with an old masking strategy that we are not plannig to use anymore. The old masking strategy is dependent with the training batch size, which means that it will produce different amount of mask when using different batch size. This will make the training loss incomparable when using different batch size. **Please set [this line](https://github.com/JSALT-2022-SSL/s3compression/blob/clean_masking/s3prl/s3prl/upstream/mel_hubert_masked_prediction/model.py#L116) to True in order to switch to the old masking strategies if you want to utilize this checkpoint**. Also, please refer to specific config file located in pretraining-config/ to know the batch size we used to train this model. **You have to use exatly same batch size in order to make the training loss comparable with ours**.
