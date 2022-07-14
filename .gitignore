@@ -1,1 +1,3 @@
 result/
+__pycache__/
+melhubert/__pycache__/
