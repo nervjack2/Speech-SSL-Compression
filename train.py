@@ -1,9 +1,12 @@
+#!/usr/bin/env python3
+
 """
     Training interface of MelHuBERT.
     Author: Tzu-Quan Lin (https://github.com/nervjack2)
     Reference: (https://github.com/s3prl/s3prl/blob/master/s3prl/run_pretrain.py)
     Reference author: Andy T. Liu (https://github.com/andi611)
 """
+
 import os
 import yaml
 import glob
@@ -71,6 +74,7 @@ def get_args():
 
     return args, runner_config
 
+
 def main():
     args, runner_config = get_args()
     
@@ -82,12 +86,12 @@ def main():
         torch.cuda.manual_seed_all(args.seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-    
+
     runner = Runner(args, runner_config)
     runner.train()
     runner.logger.close()
 
 
-
 if __name__ == '__main__':
     main()
+
