@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from melhubert import MelHuBERTModel, MelHuBERTConfig
+from melhubert.model import MelHuBERTModel, MelHuBERTConfig
 import dataset
 
 class MelHuBERTPretrainer(nn.Module):
