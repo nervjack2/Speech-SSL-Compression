@@ -9,7 +9,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from melhubert import MelHuBERTModel, MelHuBERTConfig
-from dataset import MelFeatDataset
+import dataset
 
 class MelHuBERTPretrainer(nn.Module):
     def __init__(self, datarc, upstream_config, initial_weight=None, device='cuda', multi_gpu=False):
@@ -63,21 +63,9 @@ class MelHuBERTPretrainer(nn.Module):
             print(f'[MelHuBERTPretrainer] Adjust last predicting feed forward layer\'s dimension according to the config.')
 
     def _get_train_dataloader(self):
-        dataset = MelFeatDataset(
-            self.upstream_config['task'],
-            self.datarc['train_batch_size'],
-            self.datarc['sets'],
-            self.datarc['max_timestep'],
-        )
-        dataloader = DataLoader(
-            dataset, 
-            batch_size=1, # for bucketing
-            shuffle=True, 
-            num_workers=self.datarc['num_workers'],
-            drop_last=False, 
-            pin_memory=True, 
-            collate_fn=dataset.collate_fn
-        )
+        dataloader = dataset.LibriSpeechKmeans(self.datarc['fbank_scp'],
+            self.datarc['bas_scp'], self.datarc['fbank_mean_var'])
+
         return dataloader
 
     def load_model(self, init_ckpt):
@@ -105,7 +93,7 @@ class MelHuBERTPretrainer(nn.Module):
         Return:
             loss        
         """
-        audio_feat, label, pad_mask, audio_len = data[0], data[1], data[2], data[3]
+        audio_feat, label, pad_mask = data[0], data[1], data[2]
         audio_feat = audio_feat.to(self.device)
         label = label.to(self.device)
         pad_mask = pad_mask.to(self.device)
