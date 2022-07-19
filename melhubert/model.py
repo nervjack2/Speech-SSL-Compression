@@ -9,6 +9,28 @@ import torch
 from torch import nn
 from .module import TransformerEncoder
 from .fairseq_code import compute_mask_indices
+from torch.nn.utils.rnn import pad_sequence
+
+
+def pad_feat(x_batch):
+    x_len = [len(x_b) for x_b in x_batch]
+    x_pad_batch = pad_sequence(x_batch, batch_first=True)
+
+    pad_mask = torch.ones(x_pad_batch.shape[:-1])  # (batch_size, seq_len)
+
+    # Zero vectors for padding dimension
+    for idx in range(x_pad_batch.shape[0]):
+        pad_mask[idx, x_len[idx]:] = 0
+
+    return x_pad_batch, pad_mask
+
+
+def pad_label(y_batch):
+    # Pad -100 for ignore index
+    y_pad_batch = pad_sequence(y_batch, batch_first=True, padding_value=-100)
+
+    return  y_pad_batch
+
 
 class MelHuBERTConfig:
     """
