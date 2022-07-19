@@ -9,8 +9,11 @@ import torch
 import os
 import random
 import pandas as pd
+import re
+import kaldiark
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data.dataset import Dataset
+
 
 class FeatLabelDataset(Dataset):
     def __init__(self, task_config, bucket_size, sets, max_timestep=0):
@@ -74,6 +77,7 @@ class FeatLabelDataset(Dataset):
         items = items[0] 
         return items
 
+
 class MelFeatDataset(FeatLabelDataset):
     
     def __init__(self, task_config, bucket_size, sets, max_timestep=0):
@@ -106,4 +110,87 @@ class MelFeatDataset(FeatLabelDataset):
             pad_mask[idx, x_len[idx]:] = 0
 
         return x_pad_batch, y_pad_batch, pad_mask, x_len
+
+
+def read_scp(scp_path):
+    scp = []
+    with open(scp_path) as f:
+        for line in f:
+            m = re.match(r'(.+) (.+):(.+)', line)
+            key, path, shift = m.group(1), m.group(2), m.group(3)
+            # key, path_shift = line.split()
+            # path, shift = path_shift.split(':')
+            scp.append((key, path, int(shift)))
+    return scp
+
+
+def read_feat(path, shift, mean = None, stddev = None):
+    f = open(path, 'rb')
+    f.seek(shift)
+    mat = kaldiark.parse_feat_matrix(f)
+    if mean is not None and stddev is not None:
+        mat = (mat - mean) / stddev
+    f.close()
+
+    return mat
+
+
+def read_assignment(path, shift):
+    f = open(path)
+    f.seek(shift)
+    line = f.readline()
+    assignment = [int(e) for e in line.split()]
+    f.close()
+
+    return assignment
+
+
+def read_mean_var(path):
+    f = open(path)
+    s = np.array(eval(f.readline()))
+    s2 = np.array(eval(f.readline()))
+    nsamples = int(f.readline())
+    mean = s / nsamples
+    stddev = np.sqrt(s2 / nsamples - mean * mean)
+    f.close()
+
+    return mean, stddev
+
+
+class LibriSpeechFbank:
+    def __init__(self, fbank_scp_path, mean_var_path = None):
+        self.fbank_scp = read_scp(fbank_scp_path)
+        self.mean, self.stddev = read_mean_var(mean_var_path) if mean_var_path else (None, None)
+
+    def __len__(self):
+        return len(self.fbank_scp)
+
+    def __iter__(self):
+        for fbank_key, fbank_path, fbank_shift in self.fbank_scp:
+            feat = read_feat(fbank_path, fbank_shift, self.mean, self.stddev)
+
+            yield [torch.FloatTensor(feat)]
+
+
+class LibriSpeechKmeans:
+    def __init__(self, fbank_scp_path, bas_scp_path, mean_var_path = None):
+        self.fbank_scp = read_scp(fbank_scp_path)
+        self.bas_scp = read_scp(bas_scp_path)
+        self.mean, self.stddev = read_mean_var(mean_var_path) if mean_var_path else (None, None)
+
+    def __len__(self):
+        return len(self.fbank_scp)
+
+    def __iter__(self):
+        indices = list(range(len(self.fbank_scp)))
+        random.shuffle(indices)
+
+        for i in indices:
+            fbank_key, fbank_path, fbank_shift = self.fbank_scp[i]
+            feat = read_feat(fbank_path, fbank_shift, self.mean, self.stddev)
+
+            asg_key, asg_path, asg_shift = self.bas_scp[i]
+            asg = read_assignment(asg_path, asg_shift)
+
+            yield [torch.FloatTensor(feat)], [torch.LongTensor(asg)]
 
