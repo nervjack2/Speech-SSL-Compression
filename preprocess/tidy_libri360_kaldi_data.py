@@ -71,6 +71,7 @@ def main(
     for data_path, length, label_path in recorder.values():
         out_fp.write(f'{data_path},{label_path},{length}\n')
 
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         usage()
