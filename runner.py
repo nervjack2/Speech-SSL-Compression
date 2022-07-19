@@ -7,18 +7,17 @@
 import os
 import math
 import glob
-from tqdm import tqdm
 import torch
 import torch.nn as nn
-from tensorboardX import SummaryWriter
-from pretrain_expert import MelHuBERTPretrainer
+from expert import MelHuBERTPretrainer
+import melhubert.model
+
 
 class Runner():
     def __init__(self, args, runner_config):
         self.args = args
         self.runner_config = runner_config
-        self.logger = SummaryWriter(args.expdir)   
-                                                      
+
         # Do resume training if need
         self.resume_ckpt = torch.load(self.args.past_exp, map_location='cpu') if self.args.past_exp else {}
         resume_upstream = self.resume_ckpt.get('Upstream_Config')
@@ -61,22 +60,28 @@ class Runner():
     def train(self):
         # Set model train mode
         self.melhubert.train()
+
         # Prepare data
         gradient_accumulate_steps = self.runner_config['runner']['gradient_accumulate_steps']
-        print('[Runner] - Accumulated batch size:', 
-              self.runner_config['datarc']['train_batch_size'] * gradient_accumulate_steps)
+
+        # print('[Runner] - Accumulated batch size:', 
+        #       self.runner_config['datarc']['train_batch_size'] * gradient_accumulate_steps)
+        print('[Runner] - Accumulated batch size:', gradient_accumulate_steps)
+
         # Get dataloader
         dataloader = self.melhubert.dataloader
+
         # Convert between pre-training epochs and total steps
         n_epochs = self.runner_config['runner']['n_epochs']
         if n_epochs > 0: 
-            total_steps = int(n_epochs * len(dataloader.dataset) / gradient_accumulate_steps)
+            total_steps = int(n_epochs * len(dataloader) / gradient_accumulate_steps)
             self.runner_config['runner']['total_steps'] = total_steps
             print(f'[Runner] - Training for {n_epochs} epochs, which is equivalent to {total_steps} steps')
         else:
             total_steps = self.runner_config['runner']['total_steps']
-            n_epochs = int(total_steps * gradient_accumulate_steps / len(dataloader.dataset))
+            n_epochs = int(total_steps * gradient_accumulate_steps / len(dataloader))
             print(f'[Runner] - Training for {total_steps} steps, which is approximately {n_epochs} epochs')
+
         # Save checkpoint for every n epochs
         save_every_x_epochs = int(self.runner_config['runner'].get('save_every_x_epochs', -1))
         assert save_every_x_epochs == -1 or n_epochs > 0
@@ -88,25 +93,29 @@ class Runner():
         # Set optimizer
         optimizer = self._get_optimizer(self.melhubert)
         # set progress bar
-        pbar = tqdm(total=self.runner_config['runner']['total_steps'], dynamic_ncols=True, desc='overall')
+
+        pbar = {'total': self.runner_config['runner']['total_steps'], 'n': 0}
+
         resume_step = self.resume_ckpt.get('Step')
         if resume_step:
-            pbar.n = resume_step
+            pbar['n'] = resume_step
 
         all_loss = 0
         backward_steps = 0
-        prefix = f'melhubert/train-'
 
-        while pbar.n < pbar.total:
-            for data in tqdm(dataloader, dynamic_ncols=True, desc='train'):
+        while pbar['n'] < pbar['total']:
+            for x, y in dataloader:
+                x_batch, pad_mask = melhubert.model.pad_feat(x)
+                y_batch = melhubert.model.pad_label(y)
+
                 # try/except block for forward/backward
                 try:
-                    if pbar.n >= pbar.total:
+                    if pbar['n'] >= pbar['total']:
                         break
-                    global_step = pbar.n + 1
+                    global_step = pbar['n'] + 1
 
                     loss = self.melhubert(
-                        data,
+                        (x_batch, y_batch, pad_mask),
                         global_step=global_step,
                         log_step=self.runner_config['runner']['log_step'],
                     )
@@ -145,20 +154,19 @@ class Runner():
                 optimizer.zero_grad()
 
                 # Logging
-                if global_step % self.runner_config['runner']['log_step'] == 0 or pbar.n == pbar.total -1:
+                if global_step % self.runner_config['runner']['log_step'] == 0 or pbar['n'] == pbar['total'] -1:
                     # Log loss
                     if global_step % self.runner_config['runner']['log_step'] == 0:
                         all_loss /= self.runner_config['runner']['log_step']
                     else:
                         all_loss /= (global_step % self.runner_config['runner']['log_step'])
-                    self.logger.add_scalar(f'{prefix}loss', all_loss, global_step=global_step)
+
+                    print(f'step: {global_step}, loss: {all_loss}, grad norm: {grad_norm}')
             
                     all_loss = 0
-                    # Log norm
-                    self.logger.add_scalar(f'{prefix}gradient norm', grad_norm, global_step=global_step)
                 
                 # Save checkpoint for every n steps with a maximum keeping number
-                if global_step % self.runner_config['runner']['save_step'] == 0 or pbar.n == pbar.total-1:
+                if global_step % self.runner_config['runner']['save_step'] == 0 or pbar['n'] == pbar['total']-1:
                     def check_ckpt_num(directory):
                         max_keep = self.runner_config['runner']['max_keep']
                         ckpt_pths = glob.glob(f'{directory}/states-*.ckpt')
@@ -176,9 +184,9 @@ class Runner():
                     }
                     all_states = self.melhubert.add_state_to_save(all_states)
                     
-                    name = f'states-epoch-{n_epochs}.ckpt' if pbar.n == pbar.total -1 else f'states-{global_step}.ckpt'
+                    name = f'states-epoch-{n_epochs}.ckpt' if pbar['n'] == pbar['total'] -1 else f'states-{global_step}.ckpt'
                     save_path = os.path.join(self.args.expdir, name)
-                    tqdm.write(f'[Runner] - Save the checkpoint to: {save_path}')
+                    print(f'[Runner] - Save the checkpoint to: {save_path}')
                     torch.save(all_states, save_path)
 
                 # Save checkpoint for every n epochs
@@ -195,9 +203,8 @@ class Runner():
                         epoch_idx = global_step // step_per_epoch
                         name = f'checkpoint-epoch-{epoch_idx}.ckpt'
                         save_path = os.path.join(self.args.expdir, name)
-                        tqdm.write(f'[Runner] - Save the checkpoint to: {save_path}')
+                        print(f'[Runner] - Save the checkpoint to: {save_path}')
                         torch.save(all_states, save_path)
 
-                pbar.update(1)
+                pbar['n'] += 1
 
-        pbar.close()

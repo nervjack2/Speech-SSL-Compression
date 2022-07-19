@@ -89,7 +89,6 @@ def main():
 
     runner = Runner(args, runner_config)
     runner.train()
-    runner.logger.close()
 
 
 if __name__ == '__main__':
