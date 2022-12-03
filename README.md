@@ -1,6 +1,9 @@
-#  Mel-HuBERT pre-training on Original HuBERT objective but with hard label instead 
-## Basic information
-This is the implementation of HuBERT which takes fbank feature as input. And its pre-training objective is to predict the hard clustering label of fbank feature on masked time steps.
+#  Compressing Transformer-based self-supervised models for speech processing
+This is the official implementation of this two papers:
+- [MelHuBERT: A simplified HuBERT on Mel spectrogram](https://arxiv.org/abs/2211.09944)
+- [Compressing Transformer-based self-supervised models for speech processing](https://arxiv.org/abs/2211.09949)
+
+Our implementation of pre-training interface is based on [S3PRL toolkit](https://github.com/s3prl/s3prl)
 
 ## Data Preparing
 1. Download fbank features and clustering labels of libri-360 by the following command:
