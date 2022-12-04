@@ -1,4 +1,3 @@
-#  Compressing Transformer-based self-supervised models for speech processing
 This is the official implementation of this two papers:
 - [MelHuBERT: A simplified HuBERT on Mel spectrogram](https://arxiv.org/abs/2211.09944)
 - [Compressing Transformer-based self-supervised models for speech processing](https://arxiv.org/abs/2211.09949)
@@ -47,13 +46,6 @@ python3 train.py -i Path/to/CkptFile -g config_model.yaml -c config_runner.yaml 
 -n: The model checkpoints, log file, and pre-training config you used will be saved at this directory
 
 Add --init_optimizer_from_initial_weight if you also want to initialize the optimizer from -i .ckpt file
-
-### Resume training 
-Execute the following command to resume the pre-training process which had been interrupted
-```
-python3 train.py -e EXP_DIR_PATH
-```
--e: The experiment directory which you want to resume training
 
 ## Pretrained Models 
 Pretrained models are saved at [here](http://140.112.30.56:9999/pretrained_model/) \

@@ -17,13 +17,7 @@ class Runner():
     def __init__(self, args, runner_config):
         self.args = args
         self.runner_config = runner_config
-        self.logger = SummaryWriter(args.expdir)   
-                                                      
-        # Do resume training if need
-        self.resume_ckpt = torch.load(self.args.past_exp, map_location='cpu') if self.args.past_exp else {}
-        resume_upstream = self.resume_ckpt.get('Upstream_Config')
-        if resume_upstream:
-            self.args.upstream_config = resume_upstream
+        self.logger = SummaryWriter(args.expdir)                                                     
 
         # Define MelHuBERT's pretrainer
         self.melhubert = MelHuBERTPretrainer(
@@ -33,19 +27,9 @@ class Runner():
             self.args.device,
             self.args.multi_gpu).to(self.args.device)
 
-        # Load resume training weight from previous experiment
-        if self.resume_ckpt != {}:
-            print(f'[Runner] - Loading upstream weights from the previous experiment from {self.args.past_exp}')
-            self.melhubert.load_model(self.resume_ckpt)
-
     def _get_optimizer(self, model):
         from torch.optim import Adam
         optimizer = Adam(model.parameters(), **self.runner_config['optimizer'])    
-
-        resume_optimizer = self.resume_ckpt.get('Optimizer')
-        if resume_optimizer:
-            print(f'[Runner] - Loading optimizer weights from the previous experiment from {self.args.past_exp}')
-            optimizer.load_state_dict(resume_optimizer)
 
         if self.args.init_optimizer_from_initial_weight:
             all_states = torch.load(self.args.initial_weight, map_location="cpu")
@@ -89,9 +73,6 @@ class Runner():
         optimizer = self._get_optimizer(self.melhubert)
         # set progress bar
         pbar = tqdm(total=self.runner_config['runner']['total_steps'], dynamic_ncols=True, desc='overall')
-        resume_step = self.resume_ckpt.get('Step')
-        if resume_step:
-            pbar.n = resume_step
 
         all_loss = 0
         backward_steps = 0
@@ -151,6 +132,8 @@ class Runner():
                         all_loss /= self.runner_config['runner']['log_step']
                     else:
                         all_loss /= (global_step % self.runner_config['runner']['log_step'])
+                    print(all_loss)
+                    exit(0)
                     self.logger.add_scalar(f'{prefix}loss', all_loss, global_step=global_step)
             
                     all_loss = 0
