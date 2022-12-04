@@ -6,36 +6,22 @@ import yaml
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-
 from melhubert import MelHuBERTModel, MelHuBERTConfig
-from dataset import MelFeatDataset
 
 class MelHuBERTPretrainer(nn.Module):
-    def __init__(self, datarc, upstream_config, initial_weight=None, device='cuda', multi_gpu=False):
+    def __init__(self, upstream_config, initial_weight=None, device='cuda', multi_gpu=False):
         super(MelHuBERTPretrainer, self).__init__()
 
-        self.datarc = datarc
         self.initial_weight = initial_weight
         self.device = device
         self.multi_gpu = multi_gpu
 
-        # When doing resume training, the type upstream_config will be dictionary here
-        if type(upstream_config) == str:
-            self.upstream_config = yaml.load(open(upstream_config, 'r'), Loader=yaml.FullLoader)
-            print('[MelHuBERTPretrainer] - Using upstream config from:', upstream_config)
-        elif type(upstream_config) == dict:
-            self.upstream_config = upstream_config
-            print('[MelHuBERTPretrainer] - Using upstream config from the previous experiment.')
-        else:
-            raise ValueError
-        
+        self.upstream_config = upstream_config
         # Initialize the model 
         self._init_model()
         # Define pre-training loss
         self.loss = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction='mean')
-        # Get dataloader
-        self.dataloader = self._get_train_dataloader()
+     
         # Make multiple GPU training possible
         if self.multi_gpu:
             self.model = torch.nn.DataParallel(self.model)
@@ -61,24 +47,6 @@ class MelHuBERTPretrainer(nn.Module):
             self.model.adjust_arch(self.upstream_config['adjust_init_weight'])
             self.upstream_config['hubert']['num_cluster'] = self.upstream_config['adjust_init_weight']['num_cluster']
             print(f'[MelHuBERTPretrainer] Adjust last predicting feed forward layer\'s dimension according to the config.')
-
-    def _get_train_dataloader(self):
-        dataset = MelFeatDataset(
-            self.upstream_config['task'],
-            self.datarc['train_batch_size'],
-            self.datarc['sets'],
-            self.datarc['max_timestep'],
-        )
-        dataloader = DataLoader(
-            dataset, 
-            batch_size=1, # for bucketing
-            shuffle=True, 
-            num_workers=self.datarc['num_workers'],
-            drop_last=False, 
-            pin_memory=True, 
-            collate_fn=dataset.collate_fn
-        )
-        return dataloader
 
     def load_model(self, init_ckpt):
         assert 'Model' in init_ckpt

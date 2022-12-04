@@ -7,25 +7,30 @@
 import os
 import math
 import glob
+import yaml
 from tqdm import tqdm
 import torch
 import torch.nn as nn
 from tensorboardX import SummaryWriter
+from torch.utils.data import DataLoader
 from pretrain_expert import MelHuBERTPretrainer
+from dataset import MelFeatDataset
 
 class Runner():
     def __init__(self, args, runner_config):
         self.args = args
         self.runner_config = runner_config
         self.logger = SummaryWriter(args.expdir)                                                     
+        self.upstream_config = yaml.load(open(self.args.upstream_config, 'r'), Loader=yaml.FullLoader)
 
-        # Define MelHuBERT's pretrainer
-        self.melhubert = MelHuBERTPretrainer(
-            self.runner_config['datarc'], 
-            self.args.upstream_config,
-            self.args.initial_weight,
-            self.args.device,
-            self.args.multi_gpu).to(self.args.device)
+        if args.mode == 'melhubert':
+            self.melhubert = MelHuBERTPretrainer(
+                self.upstream_config,
+                self.args.initial_weight,
+                self.args.device,
+                self.args.multi_gpu).to(self.args.device)
+        else:
+            print('We do not support this mode currently.')
 
     def _get_optimizer(self, model):
         from torch.optim import Adam
@@ -42,6 +47,24 @@ class Runner():
 
         return optimizer
 
+    def _get_dataloader(self,):
+        dataset = MelFeatDataset(
+            self.upstream_config['task'],
+            self.runner_config['datarc']['train_batch_size'],
+            self.runner_config['datarc']['sets'],
+            self.runner_config['datarc']['max_timestep'],
+        )
+        dataloader = DataLoader(
+            dataset, 
+            batch_size=1, # for bucketing
+            shuffle=True, 
+            num_workers=self.runner_config['datarc']['num_workers'],
+            drop_last=False, 
+            pin_memory=True, 
+            collate_fn=dataset.collate_fn
+        )
+        return dataloader
+
     def train(self):
         # Set model train mode
         self.melhubert.train()
@@ -50,7 +73,7 @@ class Runner():
         print('[Runner] - Accumulated batch size:', 
               self.runner_config['datarc']['train_batch_size'] * gradient_accumulate_steps)
         # Get dataloader
-        dataloader = self.melhubert.dataloader
+        dataloader = self._get_dataloader()
         # Convert between pre-training epochs and total steps
         n_epochs = self.runner_config['runner']['n_epochs']
         if n_epochs > 0: 
