@@ -84,10 +84,11 @@ class Runner():
             total_steps = self.runner_config['runner']['total_steps']
             n_epochs = int(total_steps * gradient_accumulate_steps / len(dataloader.dataset))
             print(f'[Runner] - Training for {total_steps} steps, which is approximately {n_epochs} epochs')
+
         # Save checkpoint for every n epochs
         save_every_x_epochs = int(self.runner_config['runner'].get('save_every_x_epochs', -1))
-        assert save_every_x_epochs == -1 or n_epochs > 0
-        if save_every_x_epochs != -1 and n_epochs > 0:
+        if save_every_x_epochs != -1:
+            assert n_epochs > 0, 'Requiring to save model per epoch, while number of epochs is lower than 1'
             step_per_epoch = int(total_steps//n_epochs)
 
         assert self.runner_config['runner']['total_steps'] > self.runner_config['runner']['log_step']
