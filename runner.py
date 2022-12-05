@@ -13,7 +13,6 @@ import torch
 import torch.nn as nn
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
-from pretrain_expert import MelHuBERTPretrainer
 from dataset import MelFeatDataset
 
 class Runner():
@@ -24,6 +23,7 @@ class Runner():
         self.upstream_config = yaml.load(open(self.args.upstream_config, 'r'), Loader=yaml.FullLoader)
 
         if args.mode == 'melhubert':
+            from melhubert.pretrain_expert import MelHuBERTPretrainer 
             self.melhubert = MelHuBERTPretrainer(
                 self.upstream_config,
                 self.args.initial_weight,
