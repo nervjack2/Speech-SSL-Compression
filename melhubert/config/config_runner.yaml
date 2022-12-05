@@ -1,0 +1,25 @@
+runner:
+  n_epochs: 200
+  total_steps: -1
+  gradient_clipping: 10.0
+  gradient_accumulate_steps: 8
+
+  log_step: 25
+  save_step: 100
+  max_keep: 5
+  
+  # Save checkpoint for every save_every_x_epochs epochs
+  save_every_x_epochs: 10
+
+optimizer:
+  lr: 1.e-4
+  betas: [0.9, 0.999]
+  eps: 1.e-8
+  weight_decay: 0
+
+datarc:
+  num_workers: 8
+  train_batch_size: 4
+  max_timestep: -320 # Max length for audio feature (0 for no restriction, negative value to set minimum timestep)
+  sets: ['/home/nervjack2/libri-with-cluster/csv/libri-360-np-stage1.csv']
+    
