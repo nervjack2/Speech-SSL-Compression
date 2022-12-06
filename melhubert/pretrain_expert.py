@@ -6,7 +6,7 @@ import yaml
 
 import torch
 import torch.nn as nn
-from .model import MelHuBERTModel, MelHuBERTConfig
+from model import MelHuBERTModel, MelHuBERTConfig
 
 class MelHuBERTPretrainer(nn.Module):
     def __init__(self, upstream_config, initial_weight=None, device='cuda', multi_gpu=False):

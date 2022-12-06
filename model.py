@@ -7,8 +7,8 @@
 import numpy as np
 import torch
 from torch import nn
-from .module import TransformerEncoder
-from .fairseq_code import compute_mask_indices
+from module import TransformerEncoder
+from fairseq_code import compute_mask_indices
 
 class MelHuBERTConfig:
     """

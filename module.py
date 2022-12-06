@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
-from .fairseq_code import get_activation_fn, MultiheadAttention, SamePad, TransposeLast, init_bert_params
+from fairseq_code import get_activation_fn, MultiheadAttention, SamePad, TransposeLast, init_bert_params
 
 class TransformerSentenceEncoderLayer(nn.Module):
     """

@@ -18,7 +18,7 @@ from typing import Dict, Optional, Tuple
 import torch
 import torch.nn.functional as F
 from .fairseq_dropout import FairseqDropout
-from ..pytorch_code import multi_head_attention_forward
+from pytorch_code import multi_head_attention_forward
 from torch import Tensor, nn
 
 class MultiheadAttention(nn.Module):
