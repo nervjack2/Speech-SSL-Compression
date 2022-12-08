@@ -59,7 +59,7 @@ Their pretraining config are saved at pretraining-config/
 ### Load models
 ```
 import torch
-from melhubert import MelHuBERTConfig, MelHuBERTModel
+from melhubert.model import MelHuBERTConfig, MelHuBERTModel
     
 all_states = torch.load(model_ckpt, map_location="cpu")
 upstream_config = all_states["Upstream_Config"]["hubert"]  
