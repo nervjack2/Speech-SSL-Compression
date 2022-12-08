@@ -28,7 +28,7 @@ This is the official implementation of this two papers:
 ### Pre-training MelHuBERT from scratch
 Execute the following command to pretrain MelHuBERT from scratch with default configuration
 ```
-python3 train.py -g ./melhubert/config/config_model.yaml -c ./melhubert/config/config_runner.yaml -n EXP_DIR_PATH -m melhubert
+python3 train.py -m melhubert -g ./melhubert/config/config_model.yaml -c ./melhubert/config/config_runner.yaml -n EXP_DIR_PATH 
 ```
 -g: Model config \
 -c: Runner config \
@@ -40,11 +40,11 @@ There are two metric for head-pruning, l1 and data-driven.
 
 For l1 metric, please execute the following command
 ```
-python3 train.py -i Path/to/CkptFile -g ./head_pruning/config/l1/config_model.yaml -c ./head_pruning/config/l1/config_runner.yaml -n EXP_DIR_PATH -m head-pruning
+python3 train.py  -m head-pruning -i Path/to/CkptFile -g ./head_pruning/config/l1/config_model.yaml -c ./head_pruning/config/l1/config_runner.yaml -n EXP_DIR_PATH
 ```
 For data-driven metric, please execute the following command 
 ```
-python3 train.py -i Path/to/CkptFile -g ./head_pruning/config/data_driven/config_model.yaml -c ./head_pruning/config/data_driven/config_runner.yaml -n EXP_DIR_PATH -m head-pruning
+python3 train.py -m head-pruning -i Path/to/CkptFile -g ./head_pruning/config/data_driven/config_model.yaml -c ./head_pruning/config/data_driven/config_runner.yaml -n EXP_DIR_PATH 
 ```
 
 -i: Pre-trained MelHuBERT will be loaded from this .ckpt file \
