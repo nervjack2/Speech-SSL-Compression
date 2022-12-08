@@ -65,7 +65,19 @@ class MultiheadAttention(nn.Module):
         self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
         self.out_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
 
+        # Forward option for different pruning situation
+        self.skip_embed_dim_check = False
+        self.need_intermediate = False
+        self.context_layer_val = None
+
         self.reset_parameters()
+
+    # # Skip embedding dimension check after pruning any head 
+    def _set_skip_embed_dim_check(self):
+        self.skip_embed_dim_check = True
+
+    def _set_need_intermediate(self, state:bool=False):
+        self.need_intermediate = state
 
     def reset_parameters(self):
         if self.qkv_same_dim:
@@ -113,7 +125,8 @@ class MultiheadAttention(nn.Module):
         src_len = tgt_len
         
         # Change self.embed_dim everytime after you have pruned on the attention head
-        assert embed_dim == self.embed_dim
+        if not self.skip_embed_dim_check:
+            assert embed_dim == self.embed_dim
 
         assert list(query.size()) == [tgt_len, bsz, embed_dim]
         if key is not None:
@@ -124,7 +137,7 @@ class MultiheadAttention(nn.Module):
 
         assert key is not None and value is not None
      
-        return multi_head_attention_forward(
+        out =  multi_head_attention_forward(
             query,
             key,
             value,
@@ -141,4 +154,14 @@ class MultiheadAttention(nn.Module):
             q_proj_weight=self.q_proj.weight,
             k_proj_weight=self.k_proj.weight,
             v_proj_weight=self.v_proj.weight,
+            skip_embed_dim_check = self.skip_embed_dim_check,
+            need_intermediate = self.need_intermediate
         )
+        # Catching gradient for data-driven pruning
+        if self.need_intermediate:
+            self.context_layer_val = out[2]
+            if self.training:
+                self.context_layer_val.retain_grad()
+            return out[:2]
+        else:
+            return out

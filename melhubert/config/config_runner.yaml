@@ -4,8 +4,8 @@ runner:
   gradient_clipping: 10.0
   gradient_accumulate_steps: 8
 
-  log_step: 25
-  save_step: 100
+  log_step: 1000
+  save_step: 1000
   max_keep: 5
   
   # Save checkpoint for every save_every_x_epochs epochs

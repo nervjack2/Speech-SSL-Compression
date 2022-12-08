@@ -37,20 +37,20 @@ class MelHuBERTPretrainer(nn.Module):
         if self.initial_weight:
             all_states = torch.load(self.initial_weight, map_location="cpu")
             try:             
-                self.model.load_state_dict(all_states["Model"])
+                self.model.load_state_dict(all_states["model"])
                 print(f'[MelHuBERTPretrainer] Load initilization model weight from {self.initial_weight}')
             except:
                 raise NotImplementedError('Could not load the initilization weight')
 
     def load_model(self, init_ckpt):
-        assert 'Model' in init_ckpt
+        assert 'model' in init_ckpt
         if self.multi_gpu:
-            self.model.module.load_state_dict(init_ckpt['Model'])
+            self.model.module.load_state_dict(init_ckpt['model'])
         else:
-            self.model.load_state_dict(init_ckpt['Model'])
+            self.model.load_state_dict(init_ckpt['model'])
 
     def add_state_to_save(self, all_states):
-        all_states['Model'] = self.model.state_dict() if not self.multi_gpu else self.model.module.state_dict()
+        all_states['model'] = self.model.state_dict() if not self.multi_gpu else self.model.module.state_dict()
         all_states['Upstream_Config'] = self.upstream_config
         return all_states
 

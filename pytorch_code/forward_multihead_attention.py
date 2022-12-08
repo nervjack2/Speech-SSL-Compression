@@ -85,6 +85,7 @@ def _in_projection(
     b_q: Optional[Tensor] = None,
     b_k: Optional[Tensor] = None,
     b_v: Optional[Tensor] = None,
+    skip_embed_dim_check: bool = False
 ) -> Tuple[Tensor, Tensor, Tensor]:
     r"""
     Performs the in-projection step of the attention operation. This is simply
@@ -99,12 +100,13 @@ def _in_projection(
     """
 
     Eq, Ek, Ev = q.size(-1), k.size(-1), v.size(-1)
-    assert w_q.shape == (Eq, Eq), f"expecting query weights shape of {(Eq, Eq)}, but got {w_q.shape}"
-    assert w_k.shape == (Eq, Ek), f"expecting key weights shape of {(Eq, Ek)}, but got {w_k.shape}"
-    assert w_v.shape == (Eq, Ev), f"expecting value weights shape of {(Eq, Ev)}, but got {w_v.shape}"
-    assert b_q is None or b_q.shape == (Eq,), f"expecting query bias shape of {(Eq,)}, but got {b_q.shape}"
-    assert b_k is None or b_k.shape == (Eq,), f"expecting key bias shape of {(Eq,)}, but got {b_k.shape}"
-    assert b_v is None or b_v.shape == (Eq,), f"expecting value bias shape of {(Eq,)}, but got {b_v.shape}"
+    if not skip_embed_dim_check:
+        assert w_q.shape == (Eq, Eq), f"expecting query weights shape of {(Eq, Eq)}, but got {w_q.shape}"
+        assert w_k.shape == (Eq, Ek), f"expecting key weights shape of {(Eq, Ek)}, but got {w_k.shape}"
+        assert w_v.shape == (Eq, Ev), f"expecting value weights shape of {(Eq, Ev)}, but got {w_v.shape}"
+        assert b_q is None or b_q.shape == (Eq,), f"expecting query bias shape of {(Eq,)}, but got {b_q.shape}"
+        assert b_k is None or b_k.shape == (Eq,), f"expecting key bias shape of {(Eq,)}, but got {b_k.shape}"
+        assert b_v is None or b_v.shape == (Eq,), f"expecting value bias shape of {(Eq,)}, but got {b_v.shape}"
     return linear(q, w_q, b_q), linear(k, w_k, b_k), linear(v, w_v, b_v)
 
 
@@ -125,6 +127,8 @@ def multi_head_attention_forward(
     q_proj_weight: Optional[Tensor] = None,
     k_proj_weight: Optional[Tensor] = None,
     v_proj_weight: Optional[Tensor] = None,
+    skip_embed_dim_check: bool = False,
+    need_intermediate: bool = False
 ) -> Tuple[Tensor, Optional[Tensor]]:
     r"""
     Args:
@@ -149,12 +153,18 @@ def multi_head_attention_forward(
     tgt_len, bsz, embed_dim = query.shape
     src_len, _, _ = key.shape
 
-    assert embed_dim == embed_dim_to_check, \
-         f"was expecting embedding dimension of {embed_dim_to_check}, but got {embed_dim}"
+    if not skip_embed_dim_check:
+        assert embed_dim == embed_dim_to_check, \
+            f"was expecting embedding dimension of {embed_dim_to_check}, but got {embed_dim}"
+        head_dim = embed_dim // num_heads
+        assert head_dim * num_heads == embed_dim, f"embed_dim {embed_dim} not divisible by num_heads {num_heads}"
+    else:
+        # pruning on q,k,v projection, resulting lower dimension
+        # example: after pruning 1 head, projected embed_dim = 64*12 -> 64*11 (head_dim=64)
+        embed_dim = q_proj_weight.shape[0]
+        head_dim = embed_dim//num_heads
+        assert head_dim * num_heads == embed_dim, f"embed_dim {embed_dim} not divisible by num_heads {num_heads}"
 
-    head_dim = embed_dim // num_heads
-    assert head_dim * num_heads == embed_dim, f"embed_dim {embed_dim} not divisible by num_heads {num_heads}"
-    
     # allow MHA to have different embedding dimensions when separate projection weights are used
     assert key.shape[:2] == value.shape[:2], \
         f"key's sequence and batch dims {key.shape[:2]} do not match value's {value.shape[:2]}"
@@ -164,7 +174,7 @@ def multi_head_attention_forward(
     assert v_proj_weight is not None, "v_proj_weight should not be None"
     
     b_q, b_k, b_v = in_proj_bias.chunk(3)
-    q, k, v = _in_projection(query, key, value, q_proj_weight, k_proj_weight, v_proj_weight, b_q, b_k, b_v)
+    q, k, v = _in_projection(query, key, value, q_proj_weight, k_proj_weight, v_proj_weight, b_q, b_k, b_v, skip_embed_dim_check)
     
     # prep attention mask
     if attn_mask is not None:
@@ -218,12 +228,16 @@ def multi_head_attention_forward(
 
     # (deep breath) calculate attention and out projection
     attn_output, attn_output_weights = _scaled_dot_product_attention(q, k, v, attn_mask, dropout_p)
+    context_layer_val = attn_output # get grad for data-driven
     attn_output = attn_output.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
     attn_output = linear(attn_output, out_proj_weight, out_proj_bias)
 
     if need_weights:
-        # average attention weights over heads
+        # We do not average attention weights over heads
         attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
-        return attn_output, attn_output_weights.sum(dim=1) / num_heads
+        out = (attn_output, attn_output_weights)
     else:
-        return attn_output, None
+        out = (attn_output, None)
+    if need_intermediate:
+        out = out + (context_layer_val,)
+    return out

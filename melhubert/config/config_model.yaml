@@ -9,7 +9,7 @@ hubert:
   conv_pos_groups: 16
 
   # Transformer encoder
-  encoder_layers: 6
+  encoder_layers: 12
   encoder_embed_dim: 768
   encoder_ffn_embed_dim: 3072
   encoder_attention_heads: 12

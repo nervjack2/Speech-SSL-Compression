@@ -10,42 +10,48 @@ Our implementation of pre-training interface is based on [S3PRL toolkit](https:/
     wget http://140.112.30.56:9999/dataset/libri-360.tar.gz
     ```
 
-2. Run the following script to prepare numpy data for pre-training:
+2. Run the following script to prepare numpy data for training:
     ```
     python3 preprocess/tidy_libri360_kaldi_data.py [KALDI_DATA_DIR] [OUT_NUMPY_DIR] [DATA_CSV_FILE]
     ```
     Where KALDI_DATA_DIR is the directory you will get after decompressing in step 1. 
     OUT_NUMPY_DIR is the output directory of numpy data.
-    DATA_CSV_FILE is the file recording data path and its corresponding label path which will be used in pre-trianing phase. 
+    DATA_CSV_FILE is the file recording data path and its corresponding label path which will be used later. 
     
     Note-1: Please use absolute path when running the command. \
     Note-2: The mean and standard variance of LibriSpeech 360 hours will be saved at OUT_NUMPY_DIR/mean-std.npy. This will be useful if you are going to test the downstream performance \
     Note-3: This script will do normalization for you.
 
-3. Adjust your pre-training config file:
+3. Adjust your config file:
     - config_runner.yaml: Adjust **pretrain_expert.datarc.sets** to  [ DATA_CSV_FILE ]. 
 
-## Pre-training Command 
-### Pre-training from scratch
-Execute the following command to pretrain from scratch with default configuration
+## Command 
+### Pre-training MelHuBERT from scratch
+Execute the following command to pretrain MelHuBERT from scratch with default configuration
 ```
-python3 train.py -g config_model.yaml -c config_runner.yaml -n EXP_DIR_PATH
+python3 train.py -g ./melhubert/config/config_model.yaml -c ./melhubert/config/config_runner.yaml -n EXP_DIR_PATH -m melhubert
 ```
+-g: Model config \
+-c: Runner config \
+-n: The model checkpoints, log file, and the pre-training config you used will be saved at this directory \
+
+### Head-Pruning on MelHuBERT
+Execute the following command to do head-pruning on a pre-trained MelHuBERT. 
+There are two metric for head-pruning, l1 and data-driven. 
+
+For l1 metric, please execute the following command
+```
+python3 train.py -i Path/to/CkptFile -g ./head_pruning/config/l1/config_model.yaml -c ./head_pruning/config/l1/config_runner.yaml -n EXP_DIR_PATH -m head-pruning
+```
+For data-driven metric, please execute the following command 
+```
+python3 train.py -i Path/to/CkptFile -g ./head_pruning/config/data_driven/config_model.yaml -c ./head_pruning/config/data_driven/config_runner.yaml -n EXP_DIR_PATH -m head-pruning
+```
+
+-i: Pre-trained MelHuBERT will be loaded from this .ckpt file \
 -g: model config \
 -c: runner config \
 -n: The model checkpoints, log file, and pre-training config you used will be saved at this directory
-
-### Pre-training with weight initialized
-Execute the following command to pretrain with weight initialized
-```
-python3 train.py -i Path/to/CkptFile -g config_model.yaml -c config_runner.yaml -n EXP_DIR_PATH
-```
--i: initial weight will be loaded from this .ckpt file \
--g: model config \
--c: runner config \
--n: The model checkpoints, log file, and pre-training config you used will be saved at this directory
-
-Add --init_optimizer_from_initial_weight if you also want to initialize the optimizer from -i .ckpt file
 
 ## Pretrained Models 
 Pretrained models are saved at [here](http://140.112.30.56:9999/pretrained_model/) \

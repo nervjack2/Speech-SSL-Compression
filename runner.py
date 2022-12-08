@@ -22,13 +22,38 @@ class Runner():
         self.logger = SummaryWriter(args.expdir)                                                     
         self.upstream_config = yaml.load(open(self.args.upstream_config, 'r'), Loader=yaml.FullLoader)
 
+        # Mode of pre-training
         if args.mode == 'melhubert':
+            print('[Runner] Mode: Pre-training MelHuBERT')
             from melhubert.pretrain_expert import MelHuBERTPretrainer 
             self.melhubert = MelHuBERTPretrainer(
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
                 self.args.multi_gpu).to(self.args.device)
+
+        elif args.mode == 'head-pruning':
+            print(f'[Runner] Mode: {self.runner_config["prune"]["metric"]} head-pruning on MelHuBERT')
+            from melhubert.pretrain_expert import MelHuBERTPretrainer
+            from head_pruning.hp_utils import HeadPruningTools, set_prune_interval
+            self.melhubert = MelHuBERTPretrainer(
+                self.upstream_config,
+                self.args.initial_weight,
+                self.args.device,
+                self.args.multi_gpu).to(self.args.device)
+            self.hp_tools = HeadPruningTools(
+                self.args,
+                self.runner_config,
+                self.upstream_config,
+                self.melhubert
+            )
+            self.total_prune_step = self.runner_config['prune']['total_steps']
+            self.prune_interval = set_prune_interval(
+                gradient_accumulate_steps=self.runner_config['runner']['gradient_accumulate_steps'],
+                prune_interval=self.runner_config["prune"]["interval"],
+                warm_up_steps=self.runner_config['prune']['warm_up'],  
+            )
+            self.prune_step = 0
         else:
             print('We do not support this mode currently.')
 
@@ -85,7 +110,7 @@ class Runner():
             n_epochs = int(total_steps * gradient_accumulate_steps / len(dataloader.dataset))
             print(f'[Runner] - Training for {total_steps} steps, which is approximately {n_epochs} epochs')
 
-        # Save checkpoint for every n epochs
+        # Save checkpoint for every n epochs if specified 
         save_every_x_epochs = int(self.runner_config['runner'].get('save_every_x_epochs', -1))
         if save_every_x_epochs != -1:
             assert n_epochs > 0, 'Requiring to save model per epoch, while number of epochs is lower than 1'
@@ -99,11 +124,24 @@ class Runner():
         pbar = tqdm(total=self.runner_config['runner']['total_steps'], dynamic_ncols=True, desc='overall')
 
         all_loss = 0
+        global_step = 0
         backward_steps = 0
-        prefix = f'melhubert/train-'
+        prefix = f'{self.args.mode}/train-'
 
         while pbar.n < pbar.total:
             for data in tqdm(dataloader, dynamic_ncols=True, desc='train'):
+                # Head pruning if needed 
+                if self.args.mode  == 'head-pruning':
+                    # MODIFY: Using global step instead of number of data (equivalent when gradient accumulate step = 1)
+                    if global_step == self.prune_interval[self.prune_step]:
+                        # save previous trained pruned model
+                        self.hp_tools.save_model(optimizer, global_step)
+                        # prune
+                        self.hp_tools.prune_api(global_step)
+                        # Redefine optimizer 
+                        optimizer = self._get_optimizer(self.melhubert)
+                        self.prune_step += 1 
+
                 # try/except block for forward/backward
                 try:
                     if pbar.n >= pbar.total:
@@ -157,7 +195,8 @@ class Runner():
                     else:
                         all_loss /= (global_step % self.runner_config['runner']['log_step'])
                     print(all_loss)
-                    exit(0)
+                    if global_step == 10:
+                        exit(0)
                     self.logger.add_scalar(f'{prefix}loss', all_loss, global_step=global_step)
             
                     all_loss = 0
