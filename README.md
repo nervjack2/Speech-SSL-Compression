@@ -1,8 +1,7 @@
+# Compressing Transformer-based self-supervised models for speech processing
 This is the official implementation of this two papers:
 - [MelHuBERT: A simplified HuBERT on Mel spectrogram](https://arxiv.org/abs/2211.09944)
 - [Compressing Transformer-based self-supervised models for speech processing](https://arxiv.org/abs/2211.09949)
-
-Our implementation of pre-training interface is based on [S3PRL toolkit](https://github.com/s3prl/s3prl)
 
 ## Data Preparing
 1. Download fbank features and clustering labels of libri-360 by the following command:
@@ -77,3 +76,5 @@ last_layer_feat, _, _, _, _, hidden_states, _ = upstream_model(mel_input, input_
 | melhubert-10ms-stage1-libri360-200epochs.ckpt     | ~90M   |            13.61           |          15.10          |             64.75      |
 | melhubert-20ms-stage1-libri360-200epochs.ckpt     | ~90M   |            13.61           |          12.96          |             66.34      |
 
+## Acknowledgement 
+Our implementation of pre-training interface is based on [S3PRL toolkit](https://github.com/s3prl/s3prl)
