@@ -1,4 +1,4 @@
-hubert:
+melhubert:
   feat_emb_dim: 80
   pos_emb_type: conv
   pos_conv_depth: 1
@@ -29,12 +29,4 @@ hubert:
   activation_dropout: 0.1
   encoder_layerdrop: 0.0
 task:
-  sequence_length: 1500
-data:
-  audio:
-    mean_std_npy_path: /home/nervjack2/libri-with-cluster/np/libri-360-np-normalize2/mean-std.npy
-    feat_type: 'fbank'
-    feat_dim: 40
-    frame_length: 25
-    frame_shift: 10
-    decode_wav: false
+  sequence_length: 750

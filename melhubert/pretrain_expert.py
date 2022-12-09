@@ -30,7 +30,7 @@ class MelHuBERTPretrainer(nn.Module):
 
     def _init_model(self):
         print('[MelHuBERTPretrainer] - Initializing model...')
-        self.model_config = MelHuBERTConfig(self.upstream_config['hubert'])
+        self.model_config = MelHuBERTConfig(self.upstream_config['melhubert'])
         self.model = MelHuBERTModel(self.model_config)
 
         # Do initialization from a checkpoint if needed

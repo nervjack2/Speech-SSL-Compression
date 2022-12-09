@@ -1,4 +1,4 @@
-hubert:
+melhubert:
   # Input feature dimension 
   feat_emb_dim: 80
 
@@ -45,4 +45,4 @@ hubert:
   encoder_layerdrop: 0.0
 
 task:
-  sequence_length: 1500
+  sequence_length: 750
