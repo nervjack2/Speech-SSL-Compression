@@ -3,6 +3,8 @@ This is the official implementation of this two papers:
 - [MelHuBERT: A simplified HuBERT on Mel spectrogram](https://arxiv.org/abs/2211.09944)
 - [Compressing Transformer-based self-supervised models for speech processing](https://arxiv.org/abs/2211.09949)
 
+We support four diffrent type of compression on a transformer-based speech SSL model, including weight pruning, head pruning, low-rank approximation, and knowledge distillation.
+
 ## Data Preparing
 1. Download fbank features and clustering labels of libri-360 from the [link](https://drive.google.com/drive/u/1/folders/1fplM2ocPK7KcjobWFQOs4HSR_o0gW8NI):
 
