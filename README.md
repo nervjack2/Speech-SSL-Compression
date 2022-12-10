@@ -1,4 +1,4 @@
-# Compressing Transformer-based self-supervised models for speech processing
+# Speech Compression
 This is the official implementation of this two papers:
 - [MelHuBERT: A simplified HuBERT on Mel spectrogram](https://arxiv.org/abs/2211.09944)
 - [Compressing Transformer-based self-supervised models for speech processing](https://arxiv.org/abs/2211.09949)
