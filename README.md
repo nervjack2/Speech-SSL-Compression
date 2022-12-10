@@ -4,10 +4,7 @@ This is the official implementation of this two papers:
 - [Compressing Transformer-based self-supervised models for speech processing](https://arxiv.org/abs/2211.09949)
 
 ## Data Preparing
-1. Download fbank features and clustering labels of libri-360 by the following command:
-    ```
-    wget http://140.112.30.56:9999/dataset/libri-360.tar.gz
-    ```
+1. Download fbank features and clustering labels of libri-360 from the [link](https://drive.google.com/drive/u/1/folders/1fplM2ocPK7KcjobWFQOs4HSR_o0gW8NI):
 
 2. Run the following script to prepare numpy data for training:
     ```
@@ -69,7 +66,7 @@ Choosing between "masked" and "nomasked" for **loss_param.type** in config_model
 This parameter controls whether the input would be randomly masked.
 
 ## Pretrained Models 
-Pretrained models are saved at [here](http://140.112.30.56:9999/pretrained_model/) \
+Pretrained models are saved at [here](https://drive.google.com/drive/u/1/folders/1DHmpyQ3aekB6YFtNq2_du2HydR2rZHpM) \
 You can use wget to download the models \
 Their pretraining config are saved at pretraining-config/
 ### Load models
@@ -89,8 +86,8 @@ last_layer_feat, _, _, _, _, hidden_states, _ = upstream_model(mel_input, input_
 ### Pretrained models performance
 |                  Model name                  | Params | Phone Classification(PER%) | Phone Recognition(PER%) | Speaker Identificaiton(ACC%) |
 |:--------------------------------------------:|:------:|:--------------------------:|:-----------------------:|:----------------------------:|
-| melhubert-10ms-stage1-libri360-200epochs.ckpt     | ~90M   |            13.61           |          15.10          |             64.75      |
-| melhubert-20ms-stage1-libri360-200epochs.ckpt     | ~90M   |            13.61           |          12.96          |             66.34      |
+| melhubert-10ms-stage1-libri360.ckpt     | ~90M   |            13.61           |          15.10          |             64.75      |
+| melhubert-20ms-stage1-libri360.ckpt     | ~90M   |            13.61           |          12.96          |             66.34      |
 
 ## Acknowledgement 
 Our implementation of pre-training interface is based on [S3PRL toolkit](https://github.com/s3prl/s3prl)
