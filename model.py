@@ -36,7 +36,7 @@ class MelHuBERTConfig:
         # Output dimension 
         self.num_cluster = int(config.get("num_cluster", 512))
         self.final_dim = int(config.get("final_dim", 40))
-        # Criterion
+        # Criterion (This two parameters would not be used in distillation mode)
         self.pred_masked_weight = float(config.get("pred_masked_weight", 1.0))
         self.pred_nomask_weight = float(config.get("pred_nomask_weight", 0.0))
         # Masking 
@@ -98,33 +98,47 @@ class MelHuBERTModel(nn.Module):
 
         self.final_proj = nn.Linear(model_config.encoder_embed_dim, model_config.num_cluster)
    
-    def apply_mask(self, x, padding_mask):
+    def apply_mask(self, x, padding_mask, teacher_mask_indices):
+        """
+        teacher_mask_indices: only for distillation mode 
+        """
         B, T, C = x.shape
         if self.model_config.mask_prob > 0:
-            mask_indices = compute_mask_indices(
-                (B, T),
-                padding_mask,
-                self.model_config.mask_prob,
-                self.model_config.mask_length,
-                self.model_config.mask_selection,
-                self.model_config.mask_other,
-                min_masks=2,
-                no_overlap=self.model_config.no_mask_overlap,
-                min_space=self.model_config.mask_min_space,
-                require_same_masks=False
-            )
-        
-            mask_indices = torch.from_numpy(mask_indices).to(x.device)
+            if teacher_mask_indices != None:
+                mask_indices = teacher_mask_indices
+            else:
+                mask_indices = compute_mask_indices(
+                    (B, T),
+                    padding_mask,
+                    self.model_config.mask_prob,
+                    self.model_config.mask_length,
+                    self.model_config.mask_selection,
+                    self.model_config.mask_other,
+                    min_masks=2,
+                    no_overlap=self.model_config.no_mask_overlap,
+                    min_space=self.model_config.mask_min_space,
+                    require_same_masks=False
+                )
+                mask_indices = torch.from_numpy(mask_indices).to(x.device)
+
             x[mask_indices] = self.mask_emb
         else:
-            mask_indices = None
+            mask_indices =  None
 
         return x, mask_indices
 
     def adjust_arch(self, new_config):
         self.final_proj = nn.Linear(self.model_config.encoder_embed_dim, new_config['num_cluster'])
 
-    def forward(self, feat, pad_mask, cluster_label=None, no_pred=False, mask=False, get_hidden=False):
+    def forward(self, 
+        feat, 
+        pad_mask, 
+        cluster_label=None, 
+        no_pred=False,
+        mask=False, 
+        get_hidden=False, 
+        teacher_mask_indices=None
+    ):
         """
         Forward function
         Input:
@@ -133,10 +147,10 @@ class MelHuBERTModel(nn.Module):
         """
         # Masking before projection 
         if mask and self.model_config.mask_before_proj:
-            input_feat, mask_indices = self.apply_mask(feat, ~pad_mask.bool())
+            input_feat, mask_indices = self.apply_mask(feat, ~pad_mask.bool(), teacher_mask_indices)
         else:
             input_feat = feat
-            mask_indices = None
+            mask_indices = torch.full(pad_mask.shape, False)
 
         pre_feat = input_feat
         if self.pre_extract_proj != None:
@@ -144,7 +158,7 @@ class MelHuBERTModel(nn.Module):
         
         # Masking after projection 
         if mask and not self.model_config.mask_before_proj:
-            x, mask_indices = self.apply_mask(pre_feat, ~pad_mask.bool())
+            x, mask_indices = self.apply_mask(pre_feat, ~pad_mask.bool(), teacher_mask_indices)
         else:
             x = pre_feat
             mask_indices = mask_indices
@@ -193,4 +207,4 @@ class MelHuBERTModel(nn.Module):
             logit_u = None
             label_u = None
       
-        return hidden, logit_m, logit_u, label_m, label_u, layer_hiddens, pre_feat
+        return hidden, logit_m, logit_u, label_m, label_u, layer_hiddens, pre_feat, mask_indices

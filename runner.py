@@ -54,6 +54,14 @@ class Runner():
                 warm_up_steps=self.runner_config['prune']['warm_up'],  
             )
             self.prune_step = 0
+        elif args.mode == 'distillation':
+            print(f'[Runner] Mode: distillation on MelHuBERT')
+            from distillation.pretrain_expert import MelHuBERTDistiller
+            self.melhubert = MelHuBERTDistiller(
+                self.upstream_config,
+                self.args.initial_weight,
+                self.args.device,
+                self.args.multi_gpu).to(self.args.device)
         else:
             print('We do not support this mode currently.')
 
@@ -195,7 +203,7 @@ class Runner():
                     else:
                         all_loss /= (global_step % self.runner_config['runner']['log_step'])
                     print(all_loss)
-                    if global_step == 10:
+                    if global_step == 1:
                         exit(0)
                     self.logger.add_scalar(f'{prefix}loss', all_loss, global_step=global_step)
             

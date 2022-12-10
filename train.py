@@ -21,10 +21,10 @@ def get_args():
     parser.add_argument('-c', '--runner_config', help='The yaml file for configuring the whole experiment, except the upstream model')
     parser.add_argument('-g', '--upstream_config', help='The yaml file for the upstream model')
     parser.add_argument('-n', '--expdir', help='Save experiment at this path')
-    parser.add_argument('-m', '--mode', choices=['melhubert', 'weight-pruning', 'head-pruning', 'row-pruning', 'distilation']
+    parser.add_argument('-m', '--mode', choices=['melhubert', 'weight-pruning', 'head-pruning', 'row-pruning', 'distillation']
                                                 , help='Different mode of training')
     # Options
-    parser.add_argument('-i', '--initial_weight', help='Initialize model with a specific weight')
+    parser.add_argument('-i', '--initial_weight', help='Initialize model with a specific weight. This will be the teacher\'s weight in distillation mode.')
     parser.add_argument('--init_optimizer_from_initial_weight', action='store_true', help='Initialize optimizer from -i argument as well when set to true')
     parser.add_argument('--seed', default=1337, type=int)
     parser.add_argument('--device', default='cuda', help='model.to(device)')
