@@ -38,11 +38,11 @@ python3 train.py -m melhubert -g ./melhubert/config/config_model.yaml -c ./melhu
 Execute the following command to do head-pruning on a pre-trained MelHuBERT. 
 There are two metric for head-pruning, l1 and data-driven. 
 
-For l1 metric, please execute the following command
+For l1 metric, please execute
 ```
 python3 train.py  -m head-pruning -i Path/to/CkptFile -g ./head_pruning/config/l1/config_model.yaml -c ./head_pruning/config/l1/config_runner.yaml -n EXP_DIR_PATH
 ```
-For data-driven metric, please execute the following command 
+For data-driven metric, please execute
 ```
 python3 train.py -m head-pruning -i Path/to/CkptFile -g ./head_pruning/config/data_driven/config_model.yaml -c ./head_pruning/config/data_driven/config_runner.yaml -n EXP_DIR_PATH 
 ```
@@ -51,6 +51,22 @@ python3 train.py -m head-pruning -i Path/to/CkptFile -g ./head_pruning/config/da
 -g: model config \
 -c: runner config \
 -n: The model checkpoints, log file, and pre-training config you used will be saved at this directory
+
+### Distillation on MelHuBERT
+Execute the following command to do knowledge distillation on a pre-trained MelHuBERT teacher. 
+
+Please execute
+```
+python3 train.py  -m distillation -i Path/to/CkptFile -g ./distillation/config/config_model.yaml -c ./distillation/config/config_runner.yaml -n EXP_DIR_PATH
+```
+
+-i: Pre-trained MelHuBERT will be loaded from this .ckpt file \
+-g: model config \
+-c: runner config \
+-n: The model checkpoints, log file, and pre-training config you used will be saved at this directory
+
+Choosing between "masked" and "nomasked" for **loss_param.type** in config_model.yaml. \
+This parameter controls whether the input would be randomly masked.
 
 ## Pretrained Models 
 Pretrained models are saved at [here](http://140.112.30.56:9999/pretrained_model/) \
