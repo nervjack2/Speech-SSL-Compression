@@ -43,18 +43,13 @@ class HeadPruningTools():
         self.pruned_heads = []
 
     def prune_api(self, prune_step):
-        if  prune_step >= self.total_prune_step:
-            print('[Prune] pruning-finetuning completed')
-            return 'not-prune'
-        else:
-            self.prune(prune_step)
-            self.total_heads -= self.num_heads_each_step
-            cur_heads = 0
-            for layer in range(self.num_layers):
-                cur_heads += self.upstream.model.encoder.layers[layer].self_attn.num_heads
-            assert cur_heads == self.total_heads
-            print(f"[Prune] {self.total_heads} heads are remained")
-            return 'prune' 
+        self.prune(prune_step)
+        self.total_heads -= self.num_heads_each_step
+        cur_heads = 0
+        for layer in range(self.num_layers):
+            cur_heads += self.upstream.model.encoder.layers[layer].self_attn.num_heads
+        assert cur_heads == self.total_heads
+        print(f"[Prune] {self.total_heads} heads are remained")
 
     def prune(self, prune_step):
         n_to_prune = self.num_heads_each_step 
