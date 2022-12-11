@@ -32,7 +32,7 @@ prune:
   metric: l1
   total_steps: 11 #total pruning steps
   num_heads_each_step: 12 # only for by_whole
-  interval: [0, 25, 50000, 75000, 100000, 125000, 165000, 205000, 245000, 285000, 325000, 365000, 405000]
+  interval: [0, 25000, 50000, 75000, 100000, 125000, 165000, 205000, 245000, 285000, 325000, 365000, 405000]
   #interval: [1, 6, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
   save_step: 1 # in terms of prune steps
   warm_up: 1000

@@ -10,9 +10,9 @@ from torch.utils.data import DataLoader
 def set_prune_interval(prune_interval, gradient_accumulate_steps, warm_up_steps):
     if isinstance(prune_interval, int):
         tmp = [prune_interval*i for i in range(100)]
-        prune_interval = [(warm_up_steps+p)*gradient_accumulate_steps for p in tmp]        
+        prune_interval = [warm_up_steps+p for p in tmp]        
     elif isinstance(prune_interval, list):
-        prune_interval = [(warm_up_steps+p)*gradient_accumulate_steps for p in prune_interval]
+        prune_interval = [warm_up_steps+p for p in prune_interval]
     else:
         raise NotImplementedError
 
@@ -45,7 +45,7 @@ class HeadPruningTools():
     def prune_api(self, prune_step):
         if  prune_step >= self.total_prune_step:
             print('[Prune] pruning-finetuning completed')
-            return
+            return 'not-prune'
         else:
             self.prune(prune_step)
             self.total_heads -= self.num_heads_each_step
@@ -54,6 +54,7 @@ class HeadPruningTools():
                 cur_heads += self.upstream.model.encoder.layers[layer].self_attn.num_heads
             assert cur_heads == self.total_heads
             print(f"[Prune] {self.total_heads} heads are remained")
+            return 'prune' 
 
     def prune(self, prune_step):
         n_to_prune = self.num_heads_each_step 
