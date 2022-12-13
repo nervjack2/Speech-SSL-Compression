@@ -7,9 +7,9 @@ from collections import defaultdict
 from dataset import MelFeatDataset
 from torch.utils.data import DataLoader
 
-def set_prune_interval(prune_interval, gradient_accumulate_steps, warm_up_steps):
+def set_prune_interval(prune_interval, warm_up_steps, total_prune_steps):
     if isinstance(prune_interval, int):
-        tmp = [prune_interval*i for i in range(100)]
+        tmp = [prune_interval*i for i in range(total_prune_steps)]
         prune_interval = [warm_up_steps+p for p in tmp]        
     elif isinstance(prune_interval, list):
         prune_interval = [warm_up_steps+p for p in prune_interval]

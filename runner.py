@@ -31,21 +31,21 @@ class Runner():
                 self.args.initial_weight,
                 self.args.device,
                 self.args.multi_gpu).to(self.args.device)
-        # elif args.mode == 'weight-pruning':
-        #     print(f'[Runner] Mode: weight-pruning on MelHuBERT')
-        #     from melhubert.pretrain_expert import MelHuBERTPretrainer
-        #     from weight_pruning.wp_utils import WeightPruningTools
-        #     self.melhubert = MelHuBERTPretrainer(
-        #         self.upstream_config,
-        #         self.args.initial_weight,
-        #         self.args.device,
-        #         self.args.multi_gpu).to(self.args.device)
-        #     self.wp_tools = WeightPruningTools(
-        #         self.args,
-        #         self.runner_config,
-        #         self.upstream_config,
-        #         self.melhubert
-        #     )
+        elif args.mode == 'weight-pruning':
+            print(f'[Runner] Mode: weight-pruning on MelHuBERT')
+            from melhubert.pretrain_expert import MelHuBERTPretrainer
+            from weight_pruning.wp_utils import WeightPruningTools
+            self.melhubert = MelHuBERTPretrainer(
+                self.upstream_config,
+                self.args.initial_weight,
+                self.args.device,
+                self.args.multi_gpu).to(self.args.device)
+            self.wp_tools = WeightPruningTools(
+                self.args,
+                self.runner_config,
+                self.upstream_config,
+                self.melhubert
+            )
         elif args.mode == 'head-pruning':
             print(f'[Runner] Mode: {self.runner_config["prune"]["metric"]} head-pruning on MelHuBERT')
             from melhubert.pretrain_expert import MelHuBERTPretrainer
@@ -63,9 +63,9 @@ class Runner():
             )
             self.total_prune_step = self.runner_config['prune']['total_steps']
             self.prune_steps = set_prune_interval(
-                gradient_accumulate_steps=self.runner_config['runner']['gradient_accumulate_steps'],
-                prune_interval=self.runner_config["prune"]["interval"],
+                prune_interval=self.runner_config['prune']['interval'],
                 warm_up_steps=self.runner_config['prune']['warm_up'],  
+                total_prune_steps=self.runner_config['prune']['total_steps']
             )
             assert len(self.prune_steps) == self.total_prune_step, 'The length of pruning interval should equal to the total pruning steps'
             self.total_prune_step = self.hp_tools.total_prune_step
