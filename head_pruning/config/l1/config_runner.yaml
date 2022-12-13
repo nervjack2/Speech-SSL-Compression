@@ -1,10 +1,10 @@
 runner:
-  n_epochs: 150
-  total_steps: 474450
+  n_epochs: -1
+  total_steps: 366000
   gradient_clipping: 10.0
   gradient_accumulate_steps: 1
  
-  log_step: 5
+  log_step: 500
   save_step: 1000
   max_keep: 5
 
@@ -31,14 +31,13 @@ prune:
   target: by_layer
   metric: l1
   total_steps: 11 #total pruning steps
+  # total_steps: 4 #total pruning steps
   num_heads_each_step: 12 # only for by_whole
-  interval: [0, 25000, 50000, 75000, 100000, 125000, 165000, 205000, 245000, 285000, 325000, 365000, 405000]
-  #interval: [1, 6, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-  save_step: 1 # in terms of prune steps
+  interval: [0, 25000, 50000, 75000, 100000, 125000, 165000, 205000, 245000, 285000, 325000]
+  # interval: [1, 6, 11, 16]
   warm_up: 1000
   #warm_up: 5
-  data_ratio: 0.25
+  data_ratio: 0.25 # only used when metric is data-driven
   #data_ratio: 0.001
-  update_score_step: 1 # update head scores per n steps
   normalize_by_layer: 2 # normalize data-drive grad by k-norm 
   test_reverse: False # test reversed head score by verifying finetune loss

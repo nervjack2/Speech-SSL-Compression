@@ -31,7 +31,21 @@ class Runner():
                 self.args.initial_weight,
                 self.args.device,
                 self.args.multi_gpu).to(self.args.device)
-
+        # elif args.mode == 'weight-pruning':
+        #     print(f'[Runner] Mode: weight-pruning on MelHuBERT')
+        #     from melhubert.pretrain_expert import MelHuBERTPretrainer
+        #     from weight_pruning.wp_utils import WeightPruningTools
+        #     self.melhubert = MelHuBERTPretrainer(
+        #         self.upstream_config,
+        #         self.args.initial_weight,
+        #         self.args.device,
+        #         self.args.multi_gpu).to(self.args.device)
+        #     self.wp_tools = WeightPruningTools(
+        #         self.args,
+        #         self.runner_config,
+        #         self.upstream_config,
+        #         self.melhubert
+        #     )
         elif args.mode == 'head-pruning':
             print(f'[Runner] Mode: {self.runner_config["prune"]["metric"]} head-pruning on MelHuBERT')
             from melhubert.pretrain_expert import MelHuBERTPretrainer
@@ -48,12 +62,13 @@ class Runner():
                 self.melhubert
             )
             self.total_prune_step = self.runner_config['prune']['total_steps']
-            self.prune_interval = set_prune_interval(
+            self.prune_steps = set_prune_interval(
                 gradient_accumulate_steps=self.runner_config['runner']['gradient_accumulate_steps'],
                 prune_interval=self.runner_config["prune"]["interval"],
                 warm_up_steps=self.runner_config['prune']['warm_up'],  
             )
-            self.prune_step = 0
+            assert len(self.prune_steps) == self.total_prune_step, 'The length of pruning interval should equal to the total pruning steps'
+            self.total_prune_step = self.hp_tools.total_prune_step
         elif args.mode == 'distillation':
             print(f'[Runner] Mode: distillation on MelHuBERT')
             from distillation.pretrain_expert import MelHuBERTDistiller
@@ -121,7 +136,7 @@ class Runner():
         # Save checkpoint for every n epochs if specified 
         save_every_x_epochs = int(self.runner_config['runner'].get('save_every_x_epochs', -1))
         if save_every_x_epochs != -1:
-            assert n_epochs > 0, 'Requiring to save model per epoch, while number of epochs is lower than 1'
+            assert n_epochs > 0, 'Requiring to save model per x epochs, while the number of epochs is lower than 1'
             step_per_epoch = int(total_steps//n_epochs)
 
         assert self.runner_config['runner']['total_steps'] > self.runner_config['runner']['log_step']
@@ -141,14 +156,13 @@ class Runner():
                 # Head pruning if needed 
                 if self.args.mode  == 'head-pruning':
                     # MODIFY: Using global step instead of number of data (equivalent when gradient accumulate step = 1)
-                    if global_step == self.prune_interval[self.prune_step]:
+                    if (global_step in self.prune_steps):
                         # save previous trained pruned model
                         self.hp_tools.save_model(optimizer, global_step)
                         # prune
-                        self.hp_tools.prune_api(global_step)
+                        self.hp_tools.prune_api()       
                         # Redefine optimizer 
                         optimizer = self._get_optimizer(self.melhubert)
-                        self.prune_step += 1 
 
                 # try/except block for forward/backward
                 try:
@@ -202,9 +216,7 @@ class Runner():
                         all_loss /= self.runner_config['runner']['log_step']
                     else:
                         all_loss /= (global_step % self.runner_config['runner']['log_step'])
-                    print(all_loss)
-                    if global_step == 1:
-                        exit(0)
+
                     self.logger.add_scalar(f'{prefix}loss', all_loss, global_step=global_step)
             
                     all_loss = 0

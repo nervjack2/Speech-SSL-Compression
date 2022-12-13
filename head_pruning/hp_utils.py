@@ -42,16 +42,16 @@ class HeadPruningTools():
 
         self.pruned_heads = []
 
-    def prune_api(self, prune_step):
-        self.prune(prune_step)
+    def prune_api(self):
+        self.prune()
         self.total_heads -= self.num_heads_each_step
         cur_heads = 0
         for layer in range(self.num_layers):
             cur_heads += self.upstream.model.encoder.layers[layer].self_attn.num_heads
         assert cur_heads == self.total_heads
-        print(f"[Prune] {self.total_heads} heads are remained")
+        print(f"[Head-Prune] {self.total_heads} heads are remained")
 
-    def prune(self, prune_step):
+    def prune(self):
         n_to_prune = self.num_heads_each_step 
 
         if self.runner_conifg["prune"]["metric"] == "l1":
@@ -98,7 +98,7 @@ class HeadPruningTools():
         group_to_prune = {}
         for layer, head in to_prune:
             group_to_prune[layer] = group_to_prune.get(layer, [])+[head]
-        print(f'[Prune] - these heads are pruned:{group_to_prune}')
+        print(f'[Head-Prune] - these heads are pruned:{group_to_prune}')
         # Update pruned heads
         self.pruned_heads.append(group_to_prune)
         for idx, layer in enumerate(self.upstream.model.encoder.layers):
@@ -267,7 +267,7 @@ class HeadPruningTools():
         data_ratio = self.runner_conifg["prune"]["data_ratio"]
         assert 0 < data_ratio <= 1
         total_steps = int(len(dataloader.dataset)*data_ratio)
-        print(f'\n[Data Driven Prune] - iterate over {data_ratio} training set,which is equivalent to {total_steps} steps')
+        print(f'\n[Head-Prune] - iterate over {data_ratio} training set,which is equivalent to {total_steps} steps')
       
         # Set optimizer
         from torch.optim import Adam
@@ -369,5 +369,5 @@ class HeadPruningTools():
         name = f'states_prune_{self.total_heads}.ckpt'
         save_path = os.path.join(self.args.expdir, name)
         tqdm.write(f'[Runner] - Save the checkpoint to: {save_path}')
-        print('\n[Prune] number of parameters saved: '+str(sum(p.numel() for p in all_states['model'].values())))
+        print('\n[Head-Prune] number of parameters saved: '+str(sum(p.numel() for p in all_states['model'].values())))
         torch.save(all_states, save_path)

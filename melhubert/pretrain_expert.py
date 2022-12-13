@@ -72,7 +72,7 @@ class MelHuBERTPretrainer(nn.Module):
         label = label.to(self.device)
         pad_mask = pad_mask.to(self.device)
   
-        _, logit_m, logit_u, label_m, label_u, _, _ = self.model(audio_feat, pad_mask, label, mask=True)
+        _, logit_m, logit_u, label_m, label_u, _, _, _ = self.model(audio_feat, pad_mask, label, mask=True)
 
         loss = 0.0 
         if logit_m != None and label_m != None and self.model_config.pred_masked_weight > 0: 
