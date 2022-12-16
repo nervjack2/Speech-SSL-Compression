@@ -1,0 +1,33 @@
+runner:
+  n_epochs: -1 
+  total_steps: 1000000
+  gradient_clipping: 10.0
+  gradient_accumulate_steps: 1
+  
+  log_step: 500
+  save_step: 5000
+  max_keep: 1
+
+prune:
+  sparsity: [.2,.3,.4,.5,.55,.6,.65,.675,.7,.71,.72,.73,.74,.75,.76,.77,.78,.79,.8,.81,.82,.83,.84,.85,.86,.87,.88,.89,.9, .91, .915, .92, .925, .93, .935, .94, .945, .95]
+  # warnup, and period are steps
+  warnup: 25000 # before pruning
+  period: 25000 # between two pruning
+  n_iters: 38 # times of pruning
+  pruning_condition: "converge" # normal, converge
+  converge_loss_tolerance: 0.001 # only work in recover mode, tolerant how much performance drop
+  average_length: 15000 # only work in converge mode
+  smooth_factor: 0.9998
+  strategy: "L1Unstructured"
+
+optimizer:
+  lr: 1.e-5
+  betas: [0.9, 0.999]
+  eps: 1.e-8
+  weight_decay: 0
+
+datarc:
+  num_workers: 4
+  train_batch_size: 4
+  max_timestep: -320
+  sets: ['/home/nervjack2/libri-with-cluster/csv/libri-360-np-stage1.csv']

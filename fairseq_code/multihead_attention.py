@@ -116,6 +116,11 @@ class MultiheadAttention(nn.Module):
                 implement causal attention, where the mask prevents the
                 attention from looking forward in time (default: None).
         """
+        # [TODO] Note
+        for name in ["q", "k", "v", "out"]:
+            submodule = getattr(self, name + "_proj")
+            for hook in submodule._forward_pre_hooks.values():
+                hook(submodule, None)
 
         is_tpu = query.device.type == "xla"
         if is_tpu:
@@ -157,7 +162,7 @@ class MultiheadAttention(nn.Module):
             skip_embed_dim_check = self.skip_embed_dim_check,
             need_intermediate = self.need_intermediate
         )
-        # Catching gradient for data-driven pruning
+        # Catching gradient for data-driven head pruning
         if self.need_intermediate:
             self.context_layer_val = out[2]
             if self.training:

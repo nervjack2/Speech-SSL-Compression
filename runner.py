@@ -14,6 +14,7 @@ import torch.nn as nn
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 from dataset import MelFeatDataset
+from pytorch_code import prune
 
 class Runner():
     def __init__(self, args, runner_config):
@@ -46,6 +47,16 @@ class Runner():
                 self.upstream_config,
                 self.melhubert
             )
+            # Initialize the pruning mask 
+            params_to_prune, _ = self.wp_tools.get_params_to_prune()
+            prune.global_unstructured(
+                params_to_prune,
+                pruning_method=prune.Identity,
+            )
+            self.total_prune_step = self.wp_tools.n_iters
+            self.prune_steps = self.wp_tools.prune_steps
+            self.period = self.wp_tools.period
+            assert len(self.prune_steps) == self.total_prune_step, 'The length of pruning interval should equal to the total pruning steps' 
         elif args.mode == 'head-pruning':
             print(f'[Runner] Mode: {self.runner_config["prune"]["metric"]} head-pruning on MelHuBERT')
             from melhubert.pretrain_expert import MelHuBERTPretrainer
@@ -67,8 +78,7 @@ class Runner():
                 warm_up_steps=self.runner_config['prune']['warm_up'],  
                 total_prune_steps=self.runner_config['prune']['total_steps']
             )
-            assert len(self.prune_steps) == self.total_prune_step, 'The length of pruning interval should equal to the total pruning steps'
-            self.total_prune_step = self.hp_tools.total_prune_step
+            assert len(self.prune_steps) == self.total_prune_step, 'The length of pruning interval should equal to the total pruning steps' 
         elif args.mode == 'distillation':
             print(f'[Runner] Mode: distillation on MelHuBERT')
             from distillation.pretrain_expert import MelHuBERTDistiller
@@ -132,7 +142,9 @@ class Runner():
             total_steps = self.runner_config['runner']['total_steps']
             n_epochs = int(total_steps * gradient_accumulate_steps / len(dataloader.dataset))
             print(f'[Runner] - Training for {total_steps} steps, which is approximately {n_epochs} epochs')
-
+        # Check whether the pruning steps is smaller than the total amount of training steps
+        if self.prune_steps:
+            assert max(self.prune_steps) <= total_steps, f'Pruning steps {max(self.prune_steps)} should not be larger than the total training steps {total_steps}'
         # Save checkpoint for every n epochs if specified 
         save_every_x_epochs = int(self.runner_config['runner'].get('save_every_x_epochs', -1))
         if save_every_x_epochs != -1:
@@ -147,23 +159,29 @@ class Runner():
         pbar = tqdm(total=self.runner_config['runner']['total_steps'], dynamic_ncols=True, desc='overall')
 
         all_loss = 0
+        batch_loss = 0
         global_step = 0
         backward_steps = 0
         prefix = f'{self.args.mode}/train-'
 
         while pbar.n < pbar.total:
             for data in tqdm(dataloader, dynamic_ncols=True, desc='train'):
-                # Head pruning if needed 
-                if self.args.mode  == 'head-pruning':
+                if self.args.mode == 'weight-pruning':
+                    if (global_step in self.prune_steps):
+                        # Weight pruning
+                        state = self.wp_tools.prune_api(optimizer, pbar.n, pbar.total)
+                        if state == "not-converge":
+                            pbar.total += self.period
+                            self.prune_steps.append(max(self.prune_steps)+self.period)
+                elif self.args.mode  == 'head-pruning':
                     # MODIFY: Using global step instead of number of data (equivalent when gradient accumulate step = 1)
                     if (global_step in self.prune_steps):
-                        # save previous trained pruned model
+                        # Save model before pruning
                         self.hp_tools.save_model(optimizer, global_step)
-                        # prune
+                        # Head pruning
                         self.hp_tools.prune_api()       
                         # Redefine optimizer 
                         optimizer = self._get_optimizer(self.melhubert)
-
                 # try/except block for forward/backward
                 try:
                     if pbar.n >= pbar.total:
@@ -192,7 +210,9 @@ class Runner():
                         raise
 
                 # Record loss
-                all_loss += loss.item()
+                loss_value = loss.item()
+                all_loss += loss_value
+                batch_loss += loss_value
                 del loss
                 
                 # Whether to accumulate gradient
@@ -200,6 +220,12 @@ class Runner():
                 if backward_steps % gradient_accumulate_steps > 0:
                     continue
 
+                if self.args.mode == 'weight-pruning':
+                    # Calculating smooth loss to exam converging during weight pruning
+                    self.wp_tools.update_smooth_loss(batch_loss)
+                    self.wp_tools.update_target_smooth_loss(global_step)
+                    batch_loss = 0        
+              
                 # Gradient clipping
                 grad_norm = torch.nn.utils.clip_grad_norm_(self.melhubert.model.parameters(), self.runner_config['runner']['gradient_clipping'])
                 if math.isnan(grad_norm):
@@ -216,53 +242,54 @@ class Runner():
                         all_loss /= self.runner_config['runner']['log_step']
                     else:
                         all_loss /= (global_step % self.runner_config['runner']['log_step'])
-
+            
                     self.logger.add_scalar(f'{prefix}loss', all_loss, global_step=global_step)
             
                     all_loss = 0
                     # Log norm
                     self.logger.add_scalar(f'{prefix}gradient norm', grad_norm, global_step=global_step)
                 
-                # Save checkpoint for every n steps with a maximum keeping number
-                if global_step % self.runner_config['runner']['save_step'] == 0 or pbar.n == pbar.total-1:
-                    def check_ckpt_num(directory):
-                        max_keep = self.runner_config['runner']['max_keep']
-                        ckpt_pths = glob.glob(f'{directory}/states-*.ckpt')
-                        if len(ckpt_pths) >= max_keep:
-                            ckpt_pths = sorted(ckpt_pths, key=lambda pth: int(pth.split('-')[-1].split('.')[0]))
-                            for ckpt_pth in ckpt_pths[:len(ckpt_pths) - max_keep + 1]:
-                                os.remove(ckpt_pth)
-                    check_ckpt_num(self.args.expdir)
+                if self.args.mode == 'melhubert':
+                    # Save checkpoint for every n steps with a maximum keeping number
+                    if global_step % self.runner_config['runner']['save_step'] == 0 or pbar.n == pbar.total-1:
+                        def check_ckpt_num(directory):
+                            max_keep = self.runner_config['runner']['max_keep']
+                            ckpt_pths = glob.glob(f'{directory}/states-*.ckpt')
+                            if len(ckpt_pths) >= max_keep:
+                                ckpt_pths = sorted(ckpt_pths, key=lambda pth: int(pth.split('-')[-1].split('.')[0]))
+                                for ckpt_pth in ckpt_pths[:len(ckpt_pths) - max_keep + 1]:
+                                    os.remove(ckpt_pth)
+                        check_ckpt_num(self.args.expdir)
 
-                    all_states = {
-                        'Optimizer': optimizer.state_dict(),
-                        'Step': global_step,
-                        'Args': self.args,
-                        'Runner': self.runner_config    
-                    }
-                    all_states = self.melhubert.add_state_to_save(all_states)
-                    
-                    name = f'states-epoch-{n_epochs}.ckpt' if pbar.n == pbar.total -1 else f'states-{global_step}.ckpt'
-                    save_path = os.path.join(self.args.expdir, name)
-                    tqdm.write(f'[Runner] - Save the checkpoint to: {save_path}')
-                    torch.save(all_states, save_path)
-
-                # Save checkpoint for every n epochs
-                if save_every_x_epochs != -1:
-                    if global_step % (save_every_x_epochs*step_per_epoch) == 0:
                         all_states = {
                             'Optimizer': optimizer.state_dict(),
                             'Step': global_step,
                             'Args': self.args,
-                            'Runner': self.runner_config,
+                            'Runner': self.runner_config    
                         }
                         all_states = self.melhubert.add_state_to_save(all_states)
-
-                        epoch_idx = global_step // step_per_epoch
-                        name = f'checkpoint-epoch-{epoch_idx}.ckpt'
+                        
+                        name = f'states-epoch-{n_epochs}.ckpt' if pbar.n == pbar.total -1 else f'states-{global_step}.ckpt'
                         save_path = os.path.join(self.args.expdir, name)
                         tqdm.write(f'[Runner] - Save the checkpoint to: {save_path}')
                         torch.save(all_states, save_path)
+
+                    # Save checkpoint for every n epochs
+                    if save_every_x_epochs != -1:
+                        if global_step % (save_every_x_epochs*step_per_epoch) == 0:
+                            all_states = {
+                                'Optimizer': optimizer.state_dict(),
+                                'Step': global_step,
+                                'Args': self.args,
+                                'Runner': self.runner_config,
+                            }
+                            all_states = self.melhubert.add_state_to_save(all_states)
+
+                            epoch_idx = global_step // step_per_epoch
+                            name = f'checkpoint-epoch-{epoch_idx}.ckpt'
+                            save_path = os.path.join(self.args.expdir, name)
+                            tqdm.write(f'[Runner] - Save the checkpoint to: {save_path}')
+                            torch.save(all_states, save_path)
 
                 pbar.update(1)
 
