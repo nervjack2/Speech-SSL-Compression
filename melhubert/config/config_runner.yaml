@@ -5,10 +5,7 @@ runner:
   gradient_accumulate_steps: 8
 
   log_step: 1000
-  save_step: 1000
-  max_keep: 5
-  
-  # Save checkpoint for every save_every_x_epochs epochs
+  # Save checkpoint for every x epochs (Must specify)
   save_every_x_epochs: 10
 
 optimizer:
