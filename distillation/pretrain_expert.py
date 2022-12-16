@@ -31,17 +31,17 @@ class MelHuBERTDistiller(nn.Module):
         elif self.loss_type == 'nomasked':
             self.mask_or_not = False 
         else:
-            print(f'[MelHuBERTDistiller] No such loss type {self.loss_type}')
+            print(f'[Distiller] - No such loss type {self.loss_type}')
             exit(0)
 
         # Make multiple GPU training possible
         if self.multi_gpu:
             self.model = torch.nn.DataParallel(self.model)
-            print('[MelHuBERTDistiller] - Multi-GPU training Enabled: ' + str(torch.cuda.device_count()))
-        print('[MelHuBERTDistiller] - Number of parameters: ' + str(sum(p.numel() for p in self.model.parameters() if p.requires_grad)))
+            print('[Distiller] - Multi-GPU training Enabled: ' + str(torch.cuda.device_count()))
+        print('[Distiller] - Number of parameters: ' + str(sum(p.numel() for p in self.model.parameters() if p.requires_grad)))
 
     def _init_model(self):    
-        print('[MelHuBERTDistiller] - Initializing model...')
+        print('[Distiller] - Initializing model...')
         # Define student model architecture
         self.student_config = MelHuBERTConfig(self.upstream_config['melhubert'])
         self.model = MelHuBERTModel(self.student_config)
@@ -53,13 +53,13 @@ class MelHuBERTDistiller(nn.Module):
         all_states = torch.load(self.initial_weight, map_location="cpu")
         try:             
             self.teacher_model.load_state_dict(all_states["model"])
-            print(f'[MelHuBERTDistiller] Load teacher model\'s weight from {self.initial_weight}')
+            print(f'[Distiller] - Load teacher model\'s weight from {self.initial_weight}')
         except:
             raise NotImplementedError('Could not load the teacher model\'s weight')
 
         # Initializing from teacher
         if self.upstream_config['melhubert']['initial_from_teacher']:
-            print("[MelHuBERTDistiller] - " "Initializing from teacher")
+            print("[Distiller] - Initializing from teacher")
             self.model.encoder.pos_conv.load_state_dict(
                 self.teacher_model.encoder.pos_conv.state_dict()
             )

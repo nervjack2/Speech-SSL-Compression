@@ -49,7 +49,7 @@ class HeadPruningTools():
         for layer in range(self.num_layers):
             cur_heads += self.upstream.model.encoder.layers[layer].self_attn.num_heads
         assert cur_heads == self.total_heads
-        print(f"[Head-Prune] {self.total_heads} heads are remained")
+        tqdm.write(f"[Head Pruning] {self.total_heads} heads are remained")
 
     def prune(self):
         n_to_prune = self.num_heads_each_step 
@@ -98,7 +98,7 @@ class HeadPruningTools():
         group_to_prune = {}
         for layer, head in to_prune:
             group_to_prune[layer] = group_to_prune.get(layer, [])+[head]
-        print(f'[Head-Prune] - these heads are pruned:{group_to_prune}')
+        tqdm.write(f'[Head Pruning] - These heads are pruned:{group_to_prune}')
         # Update pruned heads
         self.pruned_heads.append(group_to_prune)
         for idx, layer in enumerate(self.upstream.model.encoder.layers):
@@ -267,7 +267,7 @@ class HeadPruningTools():
         data_ratio = self.runner_config["prune"]["data_ratio"]
         assert 0 < data_ratio <= 1
         total_steps = int(len(dataloader.dataset)*data_ratio)
-        print(f'\n[Head-Prune] - iterate over {data_ratio} training set,which is equivalent to {total_steps} steps')
+        tqdm.write(f'\n[Head Pruning] - Iterate over {data_ratio} training set, which is equivalent to {total_steps} steps')
       
         # Set optimizer
         from torch.optim import Adam
@@ -304,7 +304,6 @@ class HeadPruningTools():
 
             except RuntimeError as e:
                 if 'CUDA out of memory' in str(e):
-                    print(f'[Runner] - CUDA out of memory at step {global_step}')
                     torch.cuda.empty_cache()
                     optimizer.zero_grad()
                     continue
@@ -317,8 +316,6 @@ class HeadPruningTools():
 
             # gradient clipping
             grad_norm = torch.nn.utils.clip_grad_norm_(self.upstream.model.parameters(), self.runner_config['runner']['gradient_clipping'])
-            if math.isnan(grad_norm):
-                print(f'[Runner] - Error : grad norm is NaN at global step {global_step}')
             
             bsz = self.runner_config['datarc']['train_batch_size']
             for layer in range(self.num_layers):
@@ -368,6 +365,6 @@ class HeadPruningTools():
 
         name = f'states_prune_{self.total_heads}.ckpt'
         save_path = os.path.join(self.args.expdir, name)
-        tqdm.write(f'[Runner] - Save the checkpoint to: {save_path}')
-        print('\n[Head-Prune] number of parameters saved: '+str(sum(p.numel() for p in all_states['model'].values())))
+        tqdm.write(f'[Head Pruning] - Save the checkpoint to: {save_path}')
+        tqdm.write('[Head Pruning] - Number of parameters saved: '+str(sum(p.numel() for p in all_states['model'].values())))
         torch.save(all_states, save_path)

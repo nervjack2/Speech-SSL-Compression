@@ -43,10 +43,10 @@ class WeightPruningTools():
         self.buffer_loss = [] 
         self.pruning_times = 0
 
-        print("="*40 + "\npruning-related hyperparameters:")
-        print(f"pruning iterations:    {self.n_iters:8d}")
-        print(f"warnup steps:          {self.warnup:8d}")
-        print(f"pruning steps:         {self.prune_steps}")
+        print("="*40 + "\n[Weight Pruning] - Pruning-related hyperparameters:")
+        print(f"Pruning iterations: {self.n_iters}")
+        print(f"Warnup steps: {self.warnup}")
+        print(f"Pruning steps: {self.prune_steps}")
         print("="*40)
 
     def update_smooth_loss(self, batch_loss):
@@ -67,7 +67,7 @@ class WeightPruningTools():
         
     def prune_api(self, optimizer, global_step, total_step):
         if self.prune_condition == "converge" and self.tgt_smooth_loss - self.con_tol > self.smooth_loss:
-            print('[Weight-Prune] - Not converge, keep training')
+            tqdm.write('[Weight Pruning] - Not converge, keep training')
             return "not-converge"
         # Save checkpoint before pruning
         fname_prefix = "mask-" if prune.is_pruned(self.upstream.model) else ""
@@ -83,7 +83,7 @@ class WeightPruningTools():
             pruning_method=getattr(prune, self.prune_strategy),
             amount=amount
         )
-        print(f"[Weight-Prune] - {self.pruning_times+1} iters of pruning at {global_step} steps")
+        tqdm.write(f"[Weight Pruning] - {self.pruning_times+1} iters of pruning at {global_step} steps")
         self.pruning_times += 1 
         self.smooth_loss = None 
         return "pruned"
@@ -152,5 +152,5 @@ class WeightPruningTools():
         all_states = self.upstream.add_state_to_save(all_states)
         
         save_path = os.path.join(self.args.expdir, filename)
-        tqdm.write(f'[Runner] - Save the checkpoint to: {save_path}')
+        tqdm.write(f'[Weight Pruning] - Save the checkpoint to: {save_path}')
         torch.save(all_states, save_path)

@@ -192,7 +192,7 @@ class TransformerEncoder(nn.Module):
         else:
             raise NotImplementedError(f'Do not support this type of positional embedding. ({self.pos_emb_type})')
 
-        print(f"[TransformerEncoder] - Attention type = {args.attention_type}")
+        print(f"[MelHuBERTModel] - Attention type = {args.attention_type}")
         self.layers = nn.ModuleList(
             [
                 TransformerSentenceEncoderLayer(

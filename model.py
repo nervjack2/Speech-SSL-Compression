@@ -67,7 +67,7 @@ class MelHuBERTModel(nn.Module):
         
         self.n_encoder_layers = model_config.encoder_layers
         print(
-                f"[MelHuBERTModel] - Encoder layer = {self.n_encoder_layers}"
+            f"[MelHuBERTModel] - Encoder layer = {self.n_encoder_layers}"
         )
 
         self.pre_extract_proj = (

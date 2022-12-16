@@ -220,7 +220,7 @@ class Runner():
 
                 except RuntimeError as e:
                     if 'CUDA out of memory' in str(e):
-                        print(f'[Runner] - CUDA out of memory at step {global_step}')
+                        tqdm.write(f'[Runner] - CUDA out of memory at step {global_step}')
                         torch.cuda.empty_cache()
                         optimizer.zero_grad()
                         continue
@@ -247,7 +247,7 @@ class Runner():
                 # Gradient clipping
                 grad_norm = torch.nn.utils.clip_grad_norm_(self.melhubert.model.parameters(), self.runner_config['runner']['gradient_clipping'])
                 if math.isnan(grad_norm):
-                    print(f'[Runner] - Error : grad norm is NaN at global step {global_step}')
+                    tqdm.write(f'[Runner] - Error : grad norm is NaN at global step {global_step}')
                 elif not math.isnan(grad_norm):
                     optimizer.step()
 

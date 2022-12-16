@@ -25,11 +25,11 @@ class MelHuBERTPretrainer(nn.Module):
         # Make multiple GPU training possible
         if self.multi_gpu:
             self.model = torch.nn.DataParallel(self.model)
-            print('[MelHuBERTPretrainer] - Multi-GPU training Enabled: ' + str(torch.cuda.device_count()))
-        print('[MelHuBERTPretrainer] - Number of parameters: ' + str(sum(p.numel() for p in self.model.parameters() if p.requires_grad)))
+            print('[Pretrainer] - Multi-GPU training Enabled: ' + str(torch.cuda.device_count()))
+        print('[Pretrainer] - Number of parameters: ' + str(sum(p.numel() for p in self.model.parameters() if p.requires_grad)))
 
     def _init_model(self):
-        print('[MelHuBERTPretrainer] - Initializing model...')
+        print('[Pretrainer] - Initializing model...')
         self.model_config = MelHuBERTConfig(self.upstream_config['melhubert'])
         self.model = MelHuBERTModel(self.model_config)
 
@@ -38,7 +38,7 @@ class MelHuBERTPretrainer(nn.Module):
             all_states = torch.load(self.initial_weight, map_location="cpu")
             try:             
                 self.model.load_state_dict(all_states["model"])
-                print(f'[MelHuBERTPretrainer] Load initilization model weight from {self.initial_weight}')
+                print(f'[Pretrainer] Load initilization model weight from {self.initial_weight}')
             except:
                 raise NotImplementedError('Could not load the initilization weight')
 
