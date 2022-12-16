@@ -116,7 +116,7 @@ class MultiheadAttention(nn.Module):
                 implement causal attention, where the mask prevents the
                 attention from looking forward in time (default: None).
         """
-        # [TODO] Note
+        # For weight pruning
         for name in ["q", "k", "v", "out"]:
             submodule = getattr(self, name + "_proj")
             for hook in submodule._forward_pre_hooks.values():
