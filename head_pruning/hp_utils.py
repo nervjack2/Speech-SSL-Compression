@@ -21,15 +21,15 @@ def set_prune_interval(prune_interval, warm_up_steps, total_prune_steps):
 class HeadPruningTools():
     def __init__(self, args, runner_config, upstream_config, upstream):
         self.args = args
-        self.runner_conifg = runner_config
+        self.runner_config = runner_config
         self.upstream_config = upstream_config
         self.upstream = upstream
 
         self.num_layers = len(self.upstream.model.encoder.layers)
-        if self.runner_conifg["prune"]["metric"] == "l1":
+        if self.runner_config["prune"]["metric"] == "l1":
             self.num_heads_each_step = self.num_layers
-        elif self.runner_conifg["prune"]["metric"] == "data-driven":
-            self.num_heads_each_step = self.runner_conifg['prune']['num_heads_each_step']
+        elif self.runner_config["prune"]["metric"] == "data-driven":
+            self.num_heads_each_step = self.runner_config['prune']['num_heads_each_step']
         else:
             raise NotImplementedError
         
@@ -37,7 +37,7 @@ class HeadPruningTools():
         for layer in range(self.num_layers):
             self.total_heads += self.upstream.model.encoder.layers[layer].self_attn.num_heads
 
-        self.total_prune_step = self.runner_conifg["prune"]["total_steps"]
+        self.total_prune_step = self.runner_config["prune"]["total_steps"]
         assert self.num_heads_each_step * self.total_prune_step <= self.total_heads
 
         self.pruned_heads = []
@@ -54,16 +54,16 @@ class HeadPruningTools():
     def prune(self):
         n_to_prune = self.num_heads_each_step 
 
-        if self.runner_conifg["prune"]["metric"] == "l1":
+        if self.runner_config["prune"]["metric"] == "l1":
             heads_and_score = self.get_heads_norm(self.upstream.model.encoder)
-        elif self.runner_conifg["prune"]["metric"] == "data-driven":
+        elif self.runner_config["prune"]["metric"] == "data-driven":
             heads_and_score = self.get_head_scores_by_data_driven()
         save_path = os.path.join(self.args.expdir, f'heads_and_score_{self.total_heads}.ckpt')
         torch.save(heads_and_score, save_path)
         heads_and_score = sorted(heads_and_score, key=lambda x:x[1])
         sorted_heads = [head_and_score[0] for head_and_score in heads_and_score]
      
-        if self.runner_conifg["prune"]["target"] == "by_whole":
+        if self.runner_config["prune"]["target"] == "by_whole":
             """
             Ensure we don't delete all heads in a layer
             protect the top 1 scoring head in each layer
@@ -83,7 +83,7 @@ class HeadPruningTools():
             # Prune the lowest scoring heads
             assert len(sorted_heads) >= n_to_prune
             to_prune = sorted_heads[:n_to_prune]
-        elif self.runner_conifg["prune"]["target"] == "by_layer":
+        elif self.runner_config["prune"]["target"] == "by_layer":
             # Prune one head (lowest score)from each layer
             assert len(sorted_heads) >= n_to_prune
             temp = set(i for i in range(n_to_prune))
@@ -250,28 +250,28 @@ class HeadPruningTools():
         # Prepare data
         dataset = MelFeatDataset(
             self.upstream_config['task'],
-            self.runner_conifg['datarc']['train_batch_size'],
-            self.runner_conifg['datarc']['sets'],
-            self.runner_conifg['datarc']['max_timestep'],
+            self.runner_config['datarc']['train_batch_size'],
+            self.runner_config['datarc']['sets'],
+            self.runner_config['datarc']['max_timestep'],
         )
         dataloader = DataLoader(
             dataset, 
             batch_size=1, # for bucketing
             shuffle=True, 
-            num_workers=self.runner_conifg['datarc']['num_workers'],
+            num_workers=self.runner_config['datarc']['num_workers'],
             drop_last=False, 
             pin_memory=True, 
             collate_fn=dataset.collate_fn
         )
 
-        data_ratio = self.runner_conifg["prune"]["data_ratio"]
+        data_ratio = self.runner_config["prune"]["data_ratio"]
         assert 0 < data_ratio <= 1
         total_steps = int(len(dataloader.dataset)*data_ratio)
         print(f'\n[Head-Prune] - iterate over {data_ratio} training set,which is equivalent to {total_steps} steps')
       
         # Set optimizer
         from torch.optim import Adam
-        optimizer = Adam(self.upstream.parameters(), **self.runner_conifg['optimizer'])    
+        optimizer = Adam(self.upstream.parameters(), **self.runner_config['optimizer'])    
 
         # set progress bar
         pbar = tqdm(total=total_steps, dynamic_ncols=True, desc='overall')
@@ -295,7 +295,7 @@ class HeadPruningTools():
                 loss = self.upstream(
                     data,
                     global_step=global_step,
-                    log_step=self.runner_conifg['runner']['log_step']
+                    log_step=self.runner_config['runner']['log_step']
                 )
 
                 if self.args.multi_gpu:
@@ -316,11 +316,11 @@ class HeadPruningTools():
             del loss          
 
             # gradient clipping
-            grad_norm = torch.nn.utils.clip_grad_norm_(self.upstream.model.parameters(), self.runner_conifg['runner']['gradient_clipping'])
+            grad_norm = torch.nn.utils.clip_grad_norm_(self.upstream.model.parameters(), self.runner_config['runner']['gradient_clipping'])
             if math.isnan(grad_norm):
                 print(f'[Runner] - Error : grad norm is NaN at global step {global_step}')
             
-            bsz = self.runner_conifg['datarc']['train_batch_size']
+            bsz = self.runner_config['datarc']['train_batch_size']
             for layer in range(self.num_layers):
                 mha = self.upstream.model.encoder.layers[layer].self_attn
                 c = mha.context_layer_val
@@ -345,8 +345,8 @@ class HeadPruningTools():
         # normalize heads norm
         heads_and_score = []
         for layer in range(self.num_layers):
-            if self.runner_conifg["prune"]["normalize_by_layer"] is not None:
-                exponent = self.runner_conifg["prune"]["normalize_by_layer"]
+            if self.runner_config["prune"]["normalize_by_layer"] is not None:
+                exponent = self.runner_config["prune"]["normalize_by_layer"]
                 norm_by_layer = torch.pow(torch.pow(score[layer], exponent).sum(-1), 1/exponent)
                 score[layer] = score[layer] / (norm_by_layer.unsqueeze(-1) + 1e-20)
             num_heads = self.upstream.model.encoder.layers[layer].self_attn.num_heads
@@ -361,7 +361,7 @@ class HeadPruningTools():
             'Optimizer': optimizer.state_dict(),
             'Step': global_step,
             'Args': self.args,
-            'Runner': self.runner_conifg,
+            'Runner': self.runner_config,
             'Pruned_heads': self.pruned_heads
         }
         all_states = self.upstream.add_state_to_save(all_states)
