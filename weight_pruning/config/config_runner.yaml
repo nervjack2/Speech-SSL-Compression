@@ -13,7 +13,7 @@ prune:
   period: 25000 # between two pruning
   n_iters: 38 # times of pruning
   pruning_condition: "converge" # normal, converge
-  converge_loss_tolerance: 0.001 # only work in recover mode, tolerant how much performance drop
+  converge_loss_tolerance: 0.001 # only work in converge mode, tolerant how much performance drop
   average_length: 15000 # only work in converge mode
   smooth_factor: 0.9998
   strategy: "L1Unstructured"
