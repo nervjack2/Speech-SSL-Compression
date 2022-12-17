@@ -25,7 +25,6 @@ def read_mean_var(path):
 def main(
     data_dir,
     out_dir,
-    out_csv
 ):
     key_data_path = os.path.join(data_dir, 'train-clean-360.scp')
     key_label_path = os.path.join(data_dir, 'train-clean-360-k512-e10.bas.scp')
@@ -35,6 +34,7 @@ def main(
     mean_std_npy_save_path = os.path.join(out_dir, 'mean-std.npy')
     os.makedirs(data_save_dir, exist_ok=True)
     os.makedirs(label_save_dir, exist_ok=True)
+    out_csv = os.path.join(out_dir, 'libri-360-data-cluster-pair.csv')
     out_fp = open(out_csv, 'w')
     mean, std = read_mean_var(mean_var_path)
     mean_std = np.concatenate((mean.reshape(1,-1), std.reshape(1,-1)), axis=0)
@@ -71,5 +71,5 @@ def main(
         out_fp.write(f'{data_path},{label_path},{length}\n')
 
 if __name__ == "__main__":
-    data_dir, out_dir, out_csv = sys.argv[1], sys.argv[2], sys.argv[3]
-    main(data_dir, out_dir, out_csv)
+    data_dir, out_dir = sys.argv[1], sys.argv[2]
+    main(data_dir, out_dir)

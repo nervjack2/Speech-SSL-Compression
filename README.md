@@ -6,22 +6,14 @@ This is the official implementation of this two papers:
 We support four diffrent type of compression on a transformer-based speech SSL model, including weight pruning, head pruning, low-rank approximation, and knowledge distillation.
 
 ## Data Preparing
-1. Download fbank features and clustering labels of libri-360 from the [link](https://drive.google.com/drive/u/1/folders/1fplM2ocPK7KcjobWFQOs4HSR_o0gW8NI):
+First, please execute the following command to prepare LibriSpeech 360 horus and paired cluster labels (K-means on log Mel feature)
+```
+bash preprocess.sh [DATA_DIR]
+```
 
-2. Run the following script to prepare numpy data for training:
-    ```
-    python3 preprocess/tidy_libri360_kaldi_data.py [KALDI_DATA_DIR] [OUT_NUMPY_DIR] [DATA_CSV_FILE]
-    ```
-    Where KALDI_DATA_DIR is the directory you will get after decompressing in step 1. 
-    OUT_NUMPY_DIR is the output directory of numpy data.
-    DATA_CSV_FILE is the file recording data path and its corresponding label path which will be used later. 
-    
-    Note-1: Please use absolute path when running the command. \
-    Note-2: The mean and standard variance of LibriSpeech 360 hours will be saved at OUT_NUMPY_DIR/mean-std.npy. This will be useful if you are going to test the downstream performance \
-    Note-3: This script will do normalization for you.
+Then, please adjust **datarc.sets** in config_runner.yaml to [ DATA_DIR/libri-360-data-cluster-pair.csv ]
 
-3. Adjust your config file:
-    - config_runner.yaml: Adjust **pretrain_expert.datarc.sets** to  [ DATA_CSV_FILE ]. 
+The mean and std of LibriSpeech 360 hours is saved at DATA_DIR/mean-std.npy
 
 ## Command 
 ### Pre-training MelHuBERT from scratch
