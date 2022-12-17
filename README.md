@@ -84,7 +84,7 @@ Please execute the following command to extract feature from two example wavefor
 python3 extract_feature.py -m [MODE] -c [CHECKPOINT]
 ```
 
--m: Choice from melhubert, weight-pruning, head-pruning, row-pruning, and distillation \
+-m: Choose from melhubert, weight-pruning, head-pruning, row-pruning, and distillation \
 -c: Model checkpoint path
 
 ## Acknowledgement 
