@@ -33,9 +33,21 @@ python3 train.py -m melhubert -g ./melhubert/config/config_model.yaml -c ./melhu
 -c: Runner config \
 -n: The model checkpoints, log file, and the pre-training config you used will be saved at this directory \
 
-### Head-Pruning on MelHuBERT
-Execute the following command to do head-pruning on a pre-trained MelHuBERT. 
-There are two metric for head-pruning, l1 and data-driven. 
+### Weight Pruning
+Execute the following command to do weight pruning on a pre-trained MelHuBERT. 
+
+```
+python3 train.py  -m weight-pruning -i Path/to/CkptFile -g ./weight_pruning/config/config_model.yaml -c ./weight_pruning/config/config_runner.yaml -n EXP_DIR_PATH
+```
+
+-i: Pre-trained MelHuBERT will be loaded from this .ckpt file \
+-g: model config \
+-c: runner config \
+-n: The model checkpoints, log file, and pre-training config you used will be saved at this directory
+
+### Head Pruning
+Execute the following command to do head pruning on a pre-trained MelHuBERT. 
+There are two metric for head pruning, l1 and data-driven. 
 
 For l1 metric, please execute
 ```
@@ -51,7 +63,7 @@ python3 train.py -m head-pruning -i Path/to/CkptFile -g ./head_pruning/config/da
 -c: runner config \
 -n: The model checkpoints, log file, and pre-training config you used will be saved at this directory
 
-### Distillation on MelHuBERT
+### Distillation 
 Execute the following command to do knowledge distillation on a pre-trained MelHuBERT teacher. 
 
 Please execute
