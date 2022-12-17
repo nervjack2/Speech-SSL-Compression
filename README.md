@@ -76,7 +76,7 @@ Still need to fix the link
 
 Please execute the following command to download the pretrained MelHuBERT 
 ```
-wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1G9ri5QPc2e8dvafe8bSUNjbP9hTrJtb2' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1G9ri5QPc2e8dvafe8bSUNjbP9hTrJtb2" -O melhubert-libri360-20fp.ckpt && rm -rf /tmp/cookies.txt
+wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=10r8tC-KRwHs83OU4-UGYfshZDUsy9erS' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=10r8tC-KRwHs83OU4-UGYfshZDUsy9erS" -O melhubert-libri360-20fp.ckpt && rm -rf /tmp/cookies.txt
 ```
 ## Extracting feature 
 Please execute the following command to extract feature from two example waveforms
