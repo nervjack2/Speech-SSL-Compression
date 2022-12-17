@@ -15,7 +15,7 @@ Then, please adjust **datarc.sets** in config_runner.yaml to [ DATA_DIR/libri-36
 
 The mean and std of LibriSpeech 360 hours is saved at DATA_DIR/mean-std.npy
 
-## Command 
+## Training Command 
 ### Pre-training MelHuBERT from scratch
 Execute the following command to pretrain MelHuBERT from scratch with default configuration
 ```
@@ -23,7 +23,7 @@ python3 train.py -m melhubert -g ./melhubert/config/config_model.yaml -c ./melhu
 ```
 -g: Model config \
 -c: Runner config \
--n: The model checkpoints, log file, and the pre-training config you used will be saved at this directory \
+-n: The model checkpoints, log file, and the pre-training config you used will be saved at this directory 
 
 ### Weight Pruning
 Execute the following command to do weight pruning on a pre-trained MelHuBERT. 
@@ -72,28 +72,20 @@ Choosing between "masked" and "nomasked" for **loss_param.type** in config_model
 This parameter controls whether the input would be randomly masked.
 
 ## Pretrained Models 
-Pretrained models are saved at [here](https://drive.google.com/drive/u/1/folders/1DHmpyQ3aekB6YFtNq2_du2HydR2rZHpM) \
-You can use wget to download the models \
-Their pretraining config are saved at pretraining-config/
-### Load models
+Still need to fix the link
+
+Please execute the following command to download the pretrained MelHuBERT 
 ```
-import torch
-from model import MelHuBERTConfig, MelHuBERTModel
-    
-all_states = torch.load(model_ckpt, map_location="cpu")
-upstream_config = all_states["Upstream_Config"]["hubert"]  
-upstream_config = MelHuBERTConfig(upstream_config)
-upstream_model = MelHuBERTModel(upstream_config).to(device)
-state_dict = all_states["model"]
-upstream_model.load_state_dict(state_dict)
-upstream_model.eval() # If you are only used to extract representation
-last_layer_feat, _, _, _, _, hidden_states, _ = upstream_model(mel_input, input_pad_mask, get_hidden=True, no_pred=True)
+wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1G9ri5QPc2e8dvafe8bSUNjbP9hTrJtb2' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1G9ri5QPc2e8dvafe8bSUNjbP9hTrJtb2" -O melhubert-libri360-20fp.ckpt && rm -rf /tmp/cookies.txt
 ```
-### Pretrained models performance
-|                  Model name                  | Params | Phone Classification(PER%) | Phone Recognition(PER%) | Speaker Identificaiton(ACC%) |
-|:--------------------------------------------:|:------:|:--------------------------:|:-----------------------:|:----------------------------:|
-| melhubert-10ms-stage1-libri360.ckpt     | ~90M   |            13.61           |          15.10          |             64.75      |
-| melhubert-20ms-stage1-libri360.ckpt     | ~90M   |            13.61           |          12.96          |             66.34      |
+## Extracting feature 
+Please execute the following command to extract feature from two example waveforms
+```
+python3 extract_feature.py -m [MODE] -c [CHECKPOINT]
+```
+
+-m: Choice from melhubert, weight-pruning, head-pruning, row-pruning, and distillation \
+-c: Model checkpoint path
 
 ## Acknowledgement 
 Our implementation of pre-training interface is based on [S3PRL toolkit](https://github.com/s3prl/s3prl)
