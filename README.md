@@ -3,7 +3,7 @@ This is the official implementation of this two papers:
 - [MelHuBERT: A simplified HuBERT on Mel spectrogram](https://arxiv.org/abs/2211.09944)
 - [Compressing Transformer-based self-supervised models for speech processing](https://arxiv.org/abs/2211.09949)
 
-We support four diffrent type of compression on a transformer-based speech SSL model, including weight pruning, head pruning, low-rank approximation, and knowledge distillation.
+We support four diffrent type of compression on a transformer-based speech SSL model (MelHuBERT), including weight pruning, head pruning, low-rank approximation, and knowledge distillation.
 
 ## Data Preparing
 First, please execute the following command to prepare LibriSpeech 360 horus and paired cluster labels (K-means on log Mel feature)
@@ -72,8 +72,6 @@ Choosing between "masked" and "nomasked" for **loss_param.type** in config_model
 This parameter controls whether the input would be randomly masked.
 
 ## Pretrained Models 
-Still need to fix the link
-
 Please execute the following command to download the pretrained MelHuBERT 
 ```
 wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=10r8tC-KRwHs83OU4-UGYfshZDUsy9erS' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=10r8tC-KRwHs83OU4-UGYfshZDUsy9erS" -O melhubert-libri360-20fp.ckpt && rm -rf /tmp/cookies.txt
