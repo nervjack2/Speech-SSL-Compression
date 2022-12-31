@@ -90,7 +90,7 @@ def main():
         device=args.device, dtype=torch.float32
     )  
 
-    # # Load cluster label 
+    # Load cluster label 
     # cluster_path = [
     #     './100-121669-0000.npy',
     #     './1001-134707-0000.npy'
@@ -98,22 +98,33 @@ def main():
     # cluster = load_cluster_label(cluster_path).to(
     #     device=args.device, dtype=torch.long
     # )
-
+    
+    # Load upstream model 
+    all_states = torch.load(args.checkpoint, map_location="cpu")
+    upstream_config = all_states["Upstream_Config"]["melhubert"]  
+    upstream_config = MelHuBERTConfig(upstream_config)
+    upstream_model = MelHuBERTModel(upstream_config).to(args.device)
+    state_dict = all_states["model"]
     if args.mode == 'melhubert':
-        # Load upstream model 
-        all_states = torch.load(args.checkpoint, map_location="cpu")
-        upstream_config = all_states["Upstream_Config"]["melhubert"]  
-        upstream_config = MelHuBERTConfig(upstream_config)
-        upstream_model = MelHuBERTModel(upstream_config).to(args.device)
-        state_dict = all_states["model"]
         upstream_model.load_state_dict(state_dict)
         upstream_model.eval() 
+    elif args.mode == 'weight-pruning':
+        from pytorch_code import prune
+        from weight_pruning.wp_utils import get_params_to_prune
+        params_to_prune, _ = get_params_to_prune(upstream_model)
+        prune.global_unstructured(
+            params_to_prune,
+            pruning_method=prune.Identity,
+        )
+        upstream_model.load_state_dict(state_dict)
+        for module, name in params_to_prune:
+            prune.remove(module, name)
     else:
         print(f'Currently not support {args.mode} mode')
 
     with torch.no_grad():
         out = upstream_model(mel_input, pad_mask, get_hidden=True, no_pred=True)
-        # out = upstream_model(mel_input, pad_mask, cluster, mask=True, no_pred=False)
+    #     out = upstream_model(mel_input, pad_mask, cluster, mask=True, no_pred=False)
     # loss = torch.nn.functional.cross_entropy(out[1], out[3])
     # print(loss)
     # exit(0)
