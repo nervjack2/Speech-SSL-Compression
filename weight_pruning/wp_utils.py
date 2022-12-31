@@ -9,15 +9,50 @@ from torch.optim import Optimizer
 from pytorch_code import prune
 from tqdm import tqdm
 
+# Define group of parameters to be pruned 
+def get_params_to_prune(upstream, bias=True):
+    # Define the module to prune by regax
+    prune_regax = r".*encoder\.layers\.[0-9]+\.((self_attn\.([qkv]|out)_proj)|fc[12])\.weight"
+
+    params_to_prune = tuple()
+
+    model = upstream.model.module if isinstance(upstream.model, nn.DataParallel) else upstream.model
+
+    for layer in model.encoder.layers:
+        params_to_prune = (
+            *params_to_prune,
+            # self attention layer
+            (layer.self_attn.q_proj, "weight"),
+            (layer.self_attn.k_proj, "weight"),
+            (layer.self_attn.v_proj, "weight"),
+            (layer.self_attn.out_proj, "weight"),
+            # fc layer
+            (layer.fc1, "weight"),
+            (layer.fc2, "weight"),
+        )
+        if bias:
+            params_to_prune = (
+                *params_to_prune,
+                # bias
+                (layer.self_attn.q_proj, "bias"),
+                (layer.self_attn.k_proj, "bias"),
+                (layer.self_attn.v_proj, "bias"),
+                (layer.self_attn.out_proj, "bias"),
+                (layer.fc1, "bias"),
+                (layer.fc2, "bias"),
+            )
+            
+    def name_filter(name):
+        return re.fullmatch(prune_regax, name)
+            
+    return params_to_prune, name_filter
+
 class WeightPruningTools():
     def __init__(self, args, runner_config, upstream_config, upstream):
         self.args = args
         self.runner_config = runner_config
         self.upstream_config = upstream_config
         self.upstream = upstream
-
-        # Define the module to prune by regax
-        self.prune_regax = r".*encoder\.layers\.[0-9]+\.((self_attn\.([qkv]|out)_proj)|fc[12])\.weight"
 
         self.prune_condition = self.runner_config["prune"]["pruning_condition"]
         self.prune_strategy = self.runner_config["prune"]["strategy"]
@@ -74,7 +109,7 @@ class WeightPruningTools():
         filename = f'{fname_prefix}before-pruning-states-{global_step}.ckpt'
         self._save(optimizer, global_step, total_step, filename)
         # Pruning
-        params_to_prune, name_filter = self.get_params_to_prune()
+        params_to_prune, name_filter = get_params_to_prune(self.upstream)
         amount = self.sparsity[self.pruning_times]
         for module, name in params_to_prune:
             prune.remove(module, name)
@@ -87,41 +122,6 @@ class WeightPruningTools():
         self.pruning_times += 1 
         self.smooth_loss = None 
         return "pruned"
-
-    # Define group of parameters to be pruned 
-    def get_params_to_prune(self, bias=True):
-        params_to_prune = tuple()
-
-        model = self.upstream.model.module if isinstance(self.upstream.model, nn.DataParallel) else self.upstream.model
-
-        for layer in model.encoder.layers:
-            params_to_prune = (
-                *params_to_prune,
-                # self attention layer
-                (layer.self_attn.q_proj, "weight"),
-                (layer.self_attn.k_proj, "weight"),
-                (layer.self_attn.v_proj, "weight"),
-                (layer.self_attn.out_proj, "weight"),
-                # fc layer
-                (layer.fc1, "weight"),
-                (layer.fc2, "weight"),
-            )
-            if bias:
-                params_to_prune = (
-                    *params_to_prune,
-                    # bias
-                    (layer.self_attn.q_proj, "bias"),
-                    (layer.self_attn.k_proj, "bias"),
-                    (layer.self_attn.v_proj, "bias"),
-                    (layer.self_attn.out_proj, "bias"),
-                    (layer.fc1, "bias"),
-                    (layer.fc2, "bias"),
-                )
-            
-        def name_filter(name):
-            return re.fullmatch(self.prune_regax, name)
-            
-        return params_to_prune, name_filter
 
     def _save(
         self,

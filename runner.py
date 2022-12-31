@@ -43,7 +43,7 @@ class Runner():
         elif args.mode == 'weight-pruning':
             print(f'[Runner] Mode: weight-pruning on MelHuBERT')
             from melhubert.pretrain_expert import MelHuBERTPretrainer
-            from weight_pruning.wp_utils import WeightPruningTools
+            from weight_pruning.wp_utils import WeightPruningTools, get_params_to_prune
             self.melhubert = MelHuBERTPretrainer(
                 self.upstream_config,
                 self.args.initial_weight,
@@ -56,7 +56,7 @@ class Runner():
                 self.melhubert
             )
             # Initialize the pruning mask 
-            params_to_prune, _ = self.wp_tools.get_params_to_prune()
+            params_to_prune, _ = get_params_to_prune(self.melhubert)
             prune.global_unstructured(
                 params_to_prune,
                 pruning_method=prune.Identity,
@@ -255,12 +255,14 @@ class Runner():
 
                 # Logging
                 if global_step % self.runner_config['runner']['log_step'] == 0 or pbar.n == pbar.total -1:
-                    # Log loss
+                    # Log lossx
                     if global_step % self.runner_config['runner']['log_step'] == 0:
                         all_loss /= self.runner_config['runner']['log_step']
                     else:
                         all_loss /= (global_step % self.runner_config['runner']['log_step'])
-    
+                    print(all_loss)
+                    if global_step == 10:
+                        exit(0)
                     self.logger.add_scalar(f'{prefix}loss', all_loss, global_step=global_step)
 
                     all_loss = 0
