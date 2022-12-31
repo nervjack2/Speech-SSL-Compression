@@ -56,7 +56,7 @@ class Runner():
                 self.melhubert
             )
             # Initialize the pruning mask 
-            params_to_prune, _ = get_params_to_prune(self.melhubert)
+            params_to_prune, _ = get_params_to_prune(self.melhubert.model)
             prune.global_unstructured(
                 params_to_prune,
                 pruning_method=prune.Identity,
@@ -260,9 +260,9 @@ class Runner():
                         all_loss /= self.runner_config['runner']['log_step']
                     else:
                         all_loss /= (global_step % self.runner_config['runner']['log_step'])
-                    print(all_loss)
-                    if global_step == 10:
-                        exit(0)
+                    # print(all_loss)
+                    # if global_step == 10:
+                    #     exit(0)
                     self.logger.add_scalar(f'{prefix}loss', all_loss, global_step=global_step)
 
                     all_loss = 0

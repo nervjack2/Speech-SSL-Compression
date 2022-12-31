@@ -16,7 +16,7 @@ def get_params_to_prune(upstream, bias=True):
 
     params_to_prune = tuple()
 
-    model = upstream.model.module if isinstance(upstream.model, nn.DataParallel) else upstream.model
+    model = upstream.module if isinstance(upstream, nn.DataParallel) else upstream
 
     for layer in model.encoder.layers:
         params_to_prune = (
@@ -109,7 +109,7 @@ class WeightPruningTools():
         filename = f'{fname_prefix}before-pruning-states-{global_step}.ckpt'
         self._save(optimizer, global_step, total_step, filename)
         # Pruning
-        params_to_prune, name_filter = get_params_to_prune(self.upstream)
+        params_to_prune, name_filter = get_params_to_prune(self.upstream.model)
         amount = self.sparsity[self.pruning_times]
         for module, name in params_to_prune:
             prune.remove(module, name)
