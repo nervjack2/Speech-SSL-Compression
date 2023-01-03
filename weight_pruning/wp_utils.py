@@ -100,14 +100,15 @@ class WeightPruningTools():
                 (global_step - self.warnup + self.avg_len) in self.prune_steps):
             self.tgt_smooth_loss = self.smooth_loss
         
-    def prune_api(self, optimizer, global_step, total_step):
+    def prune_api(self, optimizer, global_step, total_step, save_or_not):
         if self.prune_condition == "converge" and self.tgt_smooth_loss - self.con_tol > self.smooth_loss:
             tqdm.write('[Weight Pruning] - Not converge, keep training')
             return "not-converge"
         # Save checkpoint before pruning
         fname_prefix = "mask-" if prune.is_pruned(self.upstream.model) else ""
         filename = f'{fname_prefix}before-pruning-states-{global_step}.ckpt'
-        self._save(optimizer, global_step, total_step, filename)
+        if save_or_not:
+            self._save(optimizer, global_step, total_step, filename)
         # Pruning
         params_to_prune, name_filter = get_params_to_prune(self.upstream.model)
         amount = self.sparsity[self.pruning_times]

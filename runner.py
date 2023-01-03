@@ -179,15 +179,16 @@ class Runner():
 
         while pbar.n < pbar.total:
             for data in tqdm(dataloader, dynamic_ncols=True, desc='train'):
+                save_or_not = (backward_steps % gradient_accumulate_steps == 0)
                 if self.args.mode in ['melhubert', 'distillation']:
                     # Save model for every x epochs in MelHuBERT pre-training mode
-                    if global_step % (self.save_every_x_epochs * step_per_epoch) == 0:
+                    if (global_step % int(self.save_every_x_epochs * step_per_epoch) == 0) and save_or_not:
                         num_epoch = global_step // step_per_epoch
                         self.mh_tools.save_model(optimizer, global_step, num_epoch)
                 elif self.args.mode == 'weight-pruning':
                     if (global_step in self.prune_steps):
                         # Weight pruning
-                        state = self.wp_tools.prune_api(optimizer, pbar.n, pbar.total)
+                        state = self.wp_tools.prune_api(optimizer, pbar.n, pbar.total, save_or_not)
                         if state == "not-converge":
                             pbar.total += self.period
                             self.prune_steps.append(max(self.prune_steps)+self.period)
@@ -195,7 +196,8 @@ class Runner():
                     # MODIFY: Using global step instead of number of data (equivalent when gradient accumulate step = 1)
                     if (global_step in self.prune_steps):
                         # Save model before pruning
-                        self.hp_tools.save_model(optimizer, global_step)
+                        if save_or_not:
+                            self.hp_tools.save_model(optimizer, global_step)
                         # Head pruning
                         self.hp_tools.prune_api()       
                         # Redefine optimizer 
