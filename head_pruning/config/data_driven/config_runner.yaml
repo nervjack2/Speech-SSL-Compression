@@ -34,4 +34,3 @@ prune:
   warm_up: 1000
   data_ratio: 0.25
   normalize_by_layer: 2 # normalize data-drive grad by k-norm 
-  test_reverse: False # test reversed head score by verifying finetune loss

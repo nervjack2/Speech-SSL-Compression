@@ -34,8 +34,7 @@ prune:
   interval: [0, 25000, 50000, 75000, 100000, 125000, 165000, 205000, 245000, 285000, 325000]
   # interval: [1, 6, 11, 16]
   warm_up: 1000
-  #warm_up: 5
+  # warm_up: 1
   data_ratio: 0.25 # only used when metric is data-driven
   #data_ratio: 0.001
   normalize_by_layer: 2 # normalize data-drive grad by k-norm 
-  test_reverse: False # test reversed head score by verifying finetune loss

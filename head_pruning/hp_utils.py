@@ -281,7 +281,7 @@ class HeadPruningTools():
         score = []
         for layer in range(self.num_layers):
             num_heads = self.upstream.model.encoder.layers[layer].self_attn.num_heads
-            score.append(torch.zeros(num_heads).to(torch.device('cuda')))
+            score.append(torch.zeros(num_heads).to(torch.device(self.args.device)))
         
         dataloader = iter(dataloader)
         while pbar.n < pbar.total:
