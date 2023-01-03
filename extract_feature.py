@@ -65,13 +65,13 @@ def prepare_data(wav_path):
 
     return mel_input, pad_mask
 
-def load_cluster_label(cluster_path):
-    cluster = []
-    for p in cluster_path:
-        c = torch.LongTensor(np.load(p)[::2])
-        cluster.append(c)
-    cluster = pad_sequence(cluster, batch_first=True, padding_value=-100) 
-    return cluster
+# def load_cluster_label(cluster_path):
+#     cluster = []
+#     for p in cluster_path:
+#         c = torch.LongTensor(np.load(p)[::2])
+#         cluster.append(c)
+#     cluster = pad_sequence(cluster, batch_first=True, padding_value=-100) 
+#     return cluster
 
 def main():
     args = get_args()
@@ -92,13 +92,13 @@ def main():
     )  
 
     # Load cluster label 
-    cluster_path = [
-        './100-121669-0000.npy',
-        './1001-134707-0000.npy'
-    ]
-    cluster = load_cluster_label(cluster_path).to(
-        device=args.device, dtype=torch.long
-    )
+    # cluster_path = [
+    #     './100-121669-0000.npy',
+    #     './1001-134707-0000.npy'
+    # ]
+    # cluster = load_cluster_label(cluster_path).to(
+    #     device=args.device, dtype=torch.long
+    # )
     
     # Load upstream model 
     all_states = torch.load(args.checkpoint, map_location="cpu")
@@ -149,11 +149,11 @@ def main():
     print(f'[Extractor] - Successfully load model with {total_params} parameters')
 
     with torch.no_grad():
-        # out = upstream_model(mel_input, pad_mask, get_hidden=True, no_pred=True)
-        out = upstream_model(mel_input, pad_mask, cluster, mask=True, no_pred=False)
-    loss = torch.nn.functional.cross_entropy(out[1], out[3])
-    print(loss)
-    exit(0)
+        out = upstream_model(mel_input, pad_mask, get_hidden=True, no_pred=True)
+    #     out = upstream_model(mel_input, pad_mask, cluster, mask=True, no_pred=False)
+    # loss = torch.nn.functional.cross_entropy(out[1], out[3])
+    # print(loss)
+    # exit(0)
     last_layer_feat, hidden_states = out[0], out[5]
     print(f'[Extractor] - Feature with shape of {last_layer_feat.shape} is extracted')
     
