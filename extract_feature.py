@@ -5,6 +5,7 @@ Please use -m option to specify the mode.
 
 import argparse
 import torch
+import torch.nn as nn
 import torchaudio
 import numpy as np 
 from torch.nn.utils.rnn import pad_sequence
@@ -64,13 +65,13 @@ def prepare_data(wav_path):
 
     return mel_input, pad_mask
 
-# def load_cluster_label(cluster_path):
-#     cluster = []
-#     for p in cluster_path:
-#         c = torch.LongTensor(np.load(p)[::2])
-#         cluster.append(c)
-#     cluster = pad_sequence(cluster, batch_first=True, padding_value=-100) 
-#     return cluster
+def load_cluster_label(cluster_path):
+    cluster = []
+    for p in cluster_path:
+        c = torch.LongTensor(np.load(p)[::2])
+        cluster.append(c)
+    cluster = pad_sequence(cluster, batch_first=True, padding_value=-100) 
+    return cluster
 
 def main():
     args = get_args()
@@ -91,13 +92,13 @@ def main():
     )  
 
     # Load cluster label 
-    # cluster_path = [
-    #     './100-121669-0000.npy',
-    #     './1001-134707-0000.npy'
-    # ]
-    # cluster = load_cluster_label(cluster_path).to(
-    #     device=args.device, dtype=torch.long
-    # )
+    cluster_path = [
+        './100-121669-0000.npy',
+        './1001-134707-0000.npy'
+    ]
+    cluster = load_cluster_label(cluster_path).to(
+        device=args.device, dtype=torch.long
+    )
     
     # Load upstream model 
     all_states = torch.load(args.checkpoint, map_location="cpu")
@@ -119,15 +120,40 @@ def main():
         upstream_model.load_state_dict(state_dict)
         for module, name in params_to_prune:
             prune.remove(module, name)
+    elif args.mode == 'head-pruning':
+        pruned_heads = all_states["Pruned_heads"]
+        summarized = {}
+        for layer_heads in pruned_heads:
+            for layer in layer_heads:
+                summarized[layer] = summarized.get(layer, 0) + len(layer_heads[layer])
+        pruned_heads = summarized
+
+        for idx, layer in enumerate(upstream_model.encoder.layers):
+            if idx in pruned_heads:
+                layer.self_attn.num_heads -= pruned_heads[idx]
+                orig_embed_dim = layer.self_attn.embed_dim
+                embed_dim = layer.self_attn.head_dim * layer.self_attn.num_heads
+                bias = True
+                layer.self_attn.embed_dim = embed_dim
+                layer.self_attn.k_proj = nn.Linear(orig_embed_dim, embed_dim, bias=bias)
+                layer.self_attn.v_proj = nn.Linear(orig_embed_dim, embed_dim, bias=bias)
+                layer.self_attn.q_proj = nn.Linear(orig_embed_dim, embed_dim, bias=bias)
+                layer.self_attn.out_proj = nn.Linear(embed_dim, orig_embed_dim, bias=bias)
+                layer.self_attn.skip_embed_dim_check = True
+                layer.self_attn.reset_parameters()
+        upstream_model.load_state_dict(state_dict)
     else:
         print(f'Currently not support {args.mode} mode')
+    
+    total_params = sum(p.numel() for p in upstream_model.parameters())
+    print(f'[Extractor] - Successfully load model with {total_params} parameters')
 
     with torch.no_grad():
-        out = upstream_model(mel_input, pad_mask, get_hidden=True, no_pred=True)
-    #     out = upstream_model(mel_input, pad_mask, cluster, mask=True, no_pred=False)
-    # loss = torch.nn.functional.cross_entropy(out[1], out[3])
-    # print(loss)
-    # exit(0)
+        # out = upstream_model(mel_input, pad_mask, get_hidden=True, no_pred=True)
+        out = upstream_model(mel_input, pad_mask, cluster, mask=True, no_pred=False)
+    loss = torch.nn.functional.cross_entropy(out[1], out[3])
+    print(loss)
+    exit(0)
     last_layer_feat, hidden_states = out[0], out[5]
     print(f'[Extractor] - Feature with shape of {last_layer_feat.shape} is extracted')
     
