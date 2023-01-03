@@ -106,7 +106,7 @@ def main():
     upstream_config = MelHuBERTConfig(upstream_config)
     upstream_model = MelHuBERTModel(upstream_config).to(args.device)
     state_dict = all_states["model"]
-    if args.mode == 'melhubert':
+    if args.mode == 'melhubert' or args.mode == 'distillation':
         upstream_model.load_state_dict(state_dict)
         upstream_model.eval() 
     elif args.mode == 'weight-pruning':
