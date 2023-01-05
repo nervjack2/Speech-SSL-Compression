@@ -13,7 +13,7 @@ class MelHuBERTTools():
         self.save_every_x_epochs = self.runner_config['runner'].get('save_every_x_epochs')
         assert self.save_every_x_epochs, 'Must specify an integer for save_every_x_epochs to save model'
 
-    def save_model(self, optimizer, global_step, num_epoch):
+    def save_model(self, optimizer, global_step, num_epoch=-1, name=None):
         if global_step == 0:
             return 
         all_states = {
@@ -24,7 +24,8 @@ class MelHuBERTTools():
         }
         all_states = self.upstream.add_state_to_save(all_states)
 
-        name = f'checkpoint-epoch-{num_epoch}.ckpt'
+        if not name:
+            name = f'checkpoint-epoch-{num_epoch}.ckpt'
         save_path = os.path.join(self.args.expdir, name)
         tqdm.write(f'[MelHuBERT] - Save the checkpoint to: {save_path}')
         torch.save(all_states, save_path)

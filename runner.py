@@ -300,7 +300,18 @@ class Runner():
                     all_loss = 0
                     # Log norm
                     self.logger.add_scalar(f'{prefix}gradient norm', grad_norm, global_step=global_step)
-
+                # Save model at the last step
+                if pbar.n == pbar.total-1:
+                    if self.args.mode in ['melhubert', 'distillation']:
+                        name = 'last-step,ckpt'
+                        self.mh_tools.save_model(optimizer, global_step, num_epoch, name=name)
+                    elif self.args.mode == 'weight-pruning':
+                        name = 'last-step.ckpt'
+                        self.wp_tools._save(optimizer, pbar.n, pbar.total, name=name)
+                    elif self.args.mode == 'head-pruning':
+                        self.hp_tools.save_model(optimizer, global_step)
+                    elif self.args.mode == 'row-pruning':
+                        self.row_tools.save_model(optimizer, global_step)
                 pbar.update(1)
 
         pbar.close()
