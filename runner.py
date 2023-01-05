@@ -87,6 +87,28 @@ class Runner():
                 total_prune_steps=self.runner_config['prune']['total_steps']
             )
             assert len(self.prune_steps) == self.total_prune_step, 'The length of pruning interval should equal to the total pruning steps' 
+        elif args.mode == 'row-pruning':
+            print(f'[Runner] Mode: row-pruning on MelHuBERT')
+            from melhubert.pretrain_expert import MelHuBERTPretrainer
+            from row_pruning.rp_utils import RowPruningTools, set_prune_interval
+            self.melhubert = MelHuBERTPretrainer(
+                self.upstream_config,
+                self.args.initial_weight,
+                self.args.device,
+                self.args.multi_gpu).to(self.args.device)
+            self.row_tools = RowPruningTools(
+                self.args,
+                self.runner_config,
+                self.upstream_config,
+                self.melhubert
+            )
+            self.total_prune_step = self.runner_config['prune']['total_steps']
+            self.prune_steps = set_prune_interval(
+                prune_interval=self.runner_config['prune']['interval'],
+                warm_up_steps=self.runner_config['prune']['warm_up'],  
+                total_prune_steps=self.runner_config['prune']['total_steps']
+            )
+            assert len(self.prune_steps) == self.total_prune_step, 'The length of pruning interval should equal to the total pruning steps' 
         elif args.mode == 'distillation':
             print(f'[Runner] Mode: distillation on MelHuBERT')
             from distillation.pretrain_expert import MelHuBERTDistiller
@@ -193,13 +215,21 @@ class Runner():
                             pbar.total += self.period
                             self.prune_steps.append(max(self.prune_steps)+self.period)
                 elif self.args.mode  == 'head-pruning':
-                    # MODIFY: Using global step instead of number of data (equivalent when gradient accumulate step = 1)
                     if (global_step in self.prune_steps):
                         # Save model before pruning
                         if save_or_not:
                             self.hp_tools.save_model(optimizer, global_step)
                         # Head pruning
                         self.hp_tools.prune_api()       
+                        # Redefine optimizer 
+                        optimizer = self._get_optimizer(self.melhubert)
+                elif self.args.mode  == 'row-pruning':
+                    if (global_step in self.prune_steps):
+                        # Save model before pruning
+                        if save_or_not:
+                            self.row_tools.save_model(optimizer, global_step)
+                        # Row pruning
+                        self.row_tools.prune_api()       
                         # Redefine optimizer 
                         optimizer = self._get_optimizer(self.melhubert)
                 # try/except block for forward/backward

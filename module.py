@@ -58,8 +58,8 @@ class TransformerSentenceEncoderLayer(nn.Module):
 
         # layer norm associated with the self attention layer
         self.self_attn_layer_norm = nn.LayerNorm(self.embedding_dim)
-        self.fc1 = nn.Linear(self.embedding_dim, ffn_embedding_dim)
-        self.fc2 = nn.Linear(ffn_embedding_dim, self.embedding_dim)
+        self.fc1 = nn.Linear(self.embedding_dim, ffn_embedding_dim, bias=True)
+        self.fc2 = nn.Linear(ffn_embedding_dim, self.embedding_dim, bias=True)
 
         # layer norm associated with the position wise feed-forward NN
         self.final_layer_norm = nn.LayerNorm(self.embedding_dim)
@@ -142,6 +142,7 @@ class TransformerEncoder(nn.Module):
 
         self.dropout = args.dropout
         self.embedding_dim = args.encoder_embed_dim
+        self.ffn_embedding_dim = args.encoder_ffn_embed_dim
 
         self.pos_emb_type = args.pos_emb_type
     
