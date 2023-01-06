@@ -181,8 +181,8 @@ class Runner():
             n_epochs = int(total_steps * gradient_accumulate_steps / len(dataloader.dataset))
             print(f'[Runner] - Training for {total_steps} steps, which is approximately {n_epochs} epochs')
     
-        step_per_epoch = int(total_steps//n_epochs)
-        
+        step_per_epoch = len(dataloader.dataset)//gradient_accumulate_steps
+
         # Check whether the pruning steps is smaller than the total amount of training steps
         if 'pruning' in self.args.mode:
             assert max(self.prune_steps) <= total_steps, f'Pruning steps {max(self.prune_steps)} should not be larger than the total training steps {total_steps}'
