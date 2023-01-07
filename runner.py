@@ -23,6 +23,11 @@ class Runner():
         self.logger = SummaryWriter(args.expdir)                                                     
         self.upstream_config = yaml.load(open(self.args.upstream_config, 'r'), Loader=yaml.FullLoader)
 
+        # Assert the dimension of input projection layer
+        if self.args.frame_period == 20:
+            assert self.upstream_config['melhubert']['feat_emb_dim'] == 80, f'Feature embedding dimension should be {80} when the frame period is {20}'
+        elif self.args.frame_period == 10:
+            assert self.upstream_config['melhubert']['feat_emb_dim'] == 40, f'Feature embedding dimension should be {40} when the frame period is {10}'
         # Mode of pre-training
         if args.mode == 'melhubert':
             print('[Runner] Mode: Pre-training MelHuBERT')
@@ -145,6 +150,7 @@ class Runner():
 
     def _get_dataloader(self,):
         dataset = MelFeatDataset(
+            self.args.frame_period,
             self.upstream_config['task'],
             self.runner_config['datarc']['train_batch_size'],
             self.runner_config['datarc']['sets'],

@@ -1,0 +1,32 @@
+runner:
+  n_epochs: -1
+  # total_steps: 510000
+  total_steps: 26
+  gradient_clipping: 10.0
+  gradient_accumulate_steps: 1
+ 
+  # log_step: 1000
+  log_step: 1
+
+optimizer:
+  lr: 1.e-5
+  betas: [0.9, 0.999]
+  eps: 1.e-8
+  weight_decay: 0
+
+datarc:
+  num_workers: 8
+  train_batch_size: 4
+  max_timestep: -320
+  sets: ['/home/nervjack2/libri-with-cluster/csv/libri-360-np-stage1.csv']
+
+prune:
+  # total_steps: 20 # total pruning steps
+  total_steps: 5
+  # num_rows_each_step: 128
+  num_rows_each_step: 512
+  # interval: [0, 25000, 50000, 75000, 100000, 125000, 150000, 175000, 200000, 
+  #             225000, 250000, 275000, 300000, 325000, 350000, 375000, 400000, 425000, 450000, 475000]
+  interval: [1, 6, 11, 16, 21]
+  # warm_up: 1000
+  warm_up: 1

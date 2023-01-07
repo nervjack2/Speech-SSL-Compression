@@ -76,21 +76,24 @@ class FeatLabelDataset(Dataset):
 
 class MelFeatDataset(FeatLabelDataset):
     
-    def __init__(self, task_config, bucket_size, sets, max_timestep=0):
+    def __init__(self, frame_period, task_config, bucket_size, sets, max_timestep=0):
         super(MelFeatDataset, self).__init__(task_config, bucket_size, sets, max_timestep)
+        self.frame_period = frame_period
 
     def _load_feat(self, feat_path):
         feat = np.load(feat_path)
-        odd_feat = feat[::2,:]
-        even_feat = feat[1::2,:]
-        if odd_feat.shape[0] != even_feat.shape[0]:
-            even_feat = np.concatenate((even_feat, np.zeros((1,even_feat.shape[1]))), axis=0)
-        new_feat = np.concatenate((odd_feat, even_feat), axis=1)
-        return torch.FloatTensor(new_feat)
+        if self.frame_period == 20:
+            odd_feat = feat[::2,:]
+            even_feat = feat[1::2,:]
+            if odd_feat.shape[0] != even_feat.shape[0]:
+                even_feat = np.concatenate((even_feat, np.zeros((1,even_feat.shape[1]))), axis=0)
+            feat = np.concatenate((odd_feat, even_feat), axis=1)
+        return torch.FloatTensor(feat)
 
     def _load_label(self, label_path):
         label = np.load(label_path)
-        label = label[::2]
+        if self.frame_period == 20:
+            label = label[::2]
         return torch.LongTensor(label)
 
     def __getitem__(self, index):
