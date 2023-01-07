@@ -67,7 +67,7 @@ class RowPruningTools():
                 )
 
         new_fc1_weight = torch.cat(new_fc1_weight).detach()
-        new_fc1_bias = torch.Tensor(new_fc1_bias).detach()
+        new_fc1_bias = torch.Tensor(new_fc1_bias).to(self.args.device).detach()
         new_fc2_weight = torch.cat(new_fc2_weight, dim=1).detach()
     
         new_fc1_weight.requires_grad = True
