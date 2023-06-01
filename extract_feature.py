@@ -16,6 +16,9 @@ def get_args():
     parser.add_argument('-m', '--mode', choices=['melhubert', 'weight-pruning', 'head-pruning', 'row-pruning', 'distillation']
                                                 , help='Different mode of inference')
     parser.add_argument('-c', '--checkpoint', help='Path to model checkpoint')
+    parser.add_argument('-f', '--fp', type=int, help='frame period', default=20)
+    parser.add_argument('-s', '--stage', type=int, help='number of pre-training stages', default=1, choices=[1,2])
+    parser.add_argument('-d', '--hours', type=int, choices=[360, 960])
     parser.add_argument('--device', default='cuda', help='model.to(device)')
     args = parser.parse_args()
 
@@ -27,7 +30,7 @@ def load_mean_std(mean_std_npy_path):
     std = torch.Tensor(mean_std[1].reshape(-1))
     return mean, std  
 
-def extract_fbank(waveform_path, mean, std):
+def extract_fbank(waveform_path, mean, std, fp=20):
     waveform, sr = torchaudio.load(waveform_path)
     waveform = waveform*(2**15)
     y = torchaudio.compliance.kaldi.fbank(
@@ -42,19 +45,23 @@ def extract_fbank(waveform_path, mean, std):
     std = std.to(y.device, dtype=torch.float32)
     y = (y-mean)/std
     # Downsampling by twice 
-    odd_y = y[::2,:]
-    even_y = y[1::2,:]
-    if odd_y.shape[0] != even_y.shape[0]:
-        even_y = torch.cat((even_y, torch.zeros(1,even_y.shape[1]).to(y.device)), dim=0)
-    new_y = torch.cat((odd_y, even_y), dim=1)
-    return new_y
+    if fp == 20:
+        odd_y = y[::2,:]
+        even_y = y[1::2,:]
+        if odd_y.shape[0] != even_y.shape[0]:
+            even_y = torch.cat((even_y, torch.zeros(1,even_y.shape[1]).to(y.device)), dim=0)
+        y = torch.cat((odd_y, even_y), dim=1)
+    return y
 
-def prepare_data(wav_path):
+def prepare_data(wav_path, fp=20, hours=360):
     # Load the mean and std of LibriSpeech 360 hours 
-    mean_std_npy_path = './example/libri-360-mean-std.npy'
+    if hours == 360:
+        mean_std_npy_path = './example/libri-360-mean-std.npy'
+    else:
+        mean_std_npy_path = './example/libri-960-mean-std.npy'
     mean, std = load_mean_std(mean_std_npy_path)
     # Extract fbank feature for model's input
-    mel_input = [extract_fbank(p, mean, std) for p in wav_path]
+    mel_input = [extract_fbank(p, mean, std, fp) for p in wav_path]
     mel_len = [len(mel) for mel in mel_input]
     mel_input = pad_sequence(mel_input, batch_first=True) # (B x S x D)
     # Prepare padding mask
@@ -63,13 +70,16 @@ def prepare_data(wav_path):
     for idx in range(mel_input.shape[0]):
         pad_mask[idx, mel_len[idx]:] = 0
 
-    return mel_input, pad_mask
+    return mel_input, mel_len, pad_mask
 
-def load_cluster_label(cluster_path):
+def load_cluster_label(cluster_path, mel_len, fp=20):
     cluster = []
-    for p in cluster_path:
-        c = torch.LongTensor(np.load(p)[::2])
-        cluster.append(c)
+    for p, l in zip(cluster_path, mel_len):
+        c = np.load(p)
+        c_len = c.shape[0]
+        if fp == 20 and c_len != l:
+            c = c[::2]
+        cluster.append(torch.LongTensor(c))
     cluster = pad_sequence(cluster, batch_first=True, padding_value=-100) 
     return cluster
 
@@ -82,7 +92,7 @@ def main():
         './example/1001-134707-0000.flac'
     ]
     print(f'[Extractor] - Extracting feature from these files: {wav_path}')
-    mel_input, pad_mask = prepare_data(wav_path)
+    mel_input, mel_len, pad_mask = prepare_data(wav_path, args.fp, args.hours)
     # Put data on device 
     mel_input = mel_input.to(
         device=args.device, dtype=torch.float32
@@ -92,13 +102,32 @@ def main():
     )  
 
     # Load cluster label 
-    cluster_path = [
-        './100-121669-0000.npy',
-        './1001-134707-0000.npy'
-    ]
-    cluster = load_cluster_label(cluster_path).to(
-        device=args.device, dtype=torch.long
-    )
+    #if args.hours == 360:
+    #    if args.stage == 1:
+    #        cluster_path = [
+    #            './example/100-121669-0000.npy',
+    #            './example/1001-134707-0000.npy'
+    #        ]
+    #    elif args.stage == 2:
+    #        if args.fp == 10:
+    #            cluster_path = [
+    #                './example/100-121669-0000-stage2-10ms.npy',
+    #                './example/1001-134707-0000-stage2-10ms.npy'
+    #            ]
+    #        elif args.fp == 20:
+    #            cluster_path = [
+    #                './example/100-121669-0000-stage2-20ms.npy',
+    #                './example/1001-134707-0000-stage2-20ms.npy'
+    #            ]
+    #else:
+    #    cluster_path = [
+    #        './example/100-121669-0000-stage2-20ms-960h.npy',
+    #        './example/1001-134707-0000-stage2-20ms-960h.npy'
+    #    ]
+
+    #cluster = load_cluster_label(cluster_path, mel_len, args.fp).to(
+    #    device=args.device, dtype=torch.long
+    #)
     
     # Load upstream model 
     all_states = torch.load(args.checkpoint, map_location="cpu")
@@ -120,6 +149,7 @@ def main():
         upstream_model.load_state_dict(state_dict)
         for module, name in params_to_prune:
             prune.remove(module, name)
+       
     elif args.mode == 'head-pruning':
         pruned_heads = all_states["Pruned_heads"]
         summarized = {}
@@ -149,11 +179,11 @@ def main():
     print(f'[Extractor] - Successfully load model with {total_params} parameters')
 
     with torch.no_grad():
-        # out = upstream_model(mel_input, pad_mask, get_hidden=True, no_pred=True)
-        out = upstream_model(mel_input, pad_mask, cluster, mask=True, no_pred=False)
-    loss = torch.nn.functional.cross_entropy(out[1], out[3])
-    print(loss)
-    exit(0)
+        out = upstream_model(mel_input, pad_mask, get_hidden=True, no_pred=True)
+        #out = upstream_model(mel_input, pad_mask, cluster, mask=True, no_pred=False)
+    #loss = torch.nn.functional.cross_entropy(out[1], out[3])
+    #print(loss)
+    #exit(0)
     last_layer_feat, hidden_states = out[0], out[5]
     print(f'[Extractor] - Feature with shape of {last_layer_feat.shape} is extracted')
     
