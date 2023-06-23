@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
-from dataset import MelFeatDataset
+from dataset import MelFeatDataset, LoadFairseqMFCCDataset
 from pytorch_code import prune
 
 class Runner():
@@ -24,9 +24,9 @@ class Runner():
         self.upstream_config = yaml.load(open(self.args.upstream_config, 'r'), Loader=yaml.FullLoader)
 
         # Assert the dimension of input projection layer
-        if self.args.frame_period == 20:
+        if self.args.frame_period == 20 and not self.args.load_fairseq_data:
             assert self.upstream_config['melhubert']['feat_emb_dim'] == 80, f'Feature embedding dimension should be {80} when the frame period is {20}'
-        elif self.args.frame_period == 10:
+        elif self.args.frame_period == 10 and not self.args.load_fairseq_data:
             assert self.upstream_config['melhubert']['feat_emb_dim'] == 40, f'Feature embedding dimension should be {40} when the frame period is {10}'
         # Mode of pre-training
         if args.mode == 'melhubert':
@@ -48,7 +48,7 @@ class Runner():
         elif args.mode == 'weight-pruning':
             print(f'[Runner] Mode: weight-pruning on MelHuBERT')
             from melhubert.pretrain_expert import MelHuBERTPretrainer
-            from weight_pruning.wp_utils import WeightPruningTools, get_params_to_prune
+            from weight_pruning.wp_utils import WeightPruningTools
             self.melhubert = MelHuBERTPretrainer(
                 self.upstream_config,
                 self.args.initial_weight,
@@ -58,14 +58,10 @@ class Runner():
                 self.args,
                 self.runner_config,
                 self.upstream_config,
-                self.melhubert
+                self.melhubert,
+                self.args.initial_weight
             )
-            # Initialize the pruning mask 
-            params_to_prune, _ = get_params_to_prune(self.melhubert.model)
-            prune.global_unstructured(
-                params_to_prune,
-                pruning_method=prune.Identity,
-            )
+
             self.total_prune_step = self.wp_tools.n_iters
             self.prune_steps = self.wp_tools.prune_steps
             self.period = self.wp_tools.period
@@ -149,13 +145,23 @@ class Runner():
         return optimizer
 
     def _get_dataloader(self,):
-        dataset = MelFeatDataset(
-            self.args.frame_period,
-            self.upstream_config['task'],
-            self.runner_config['datarc']['train_batch_size'],
-            self.runner_config['datarc']['sets'],
-            self.runner_config['datarc']['max_timestep'],
-        )
+        if not self.args.load_fairseq_data:
+            dataset = MelFeatDataset(
+                self.args.frame_period,
+                self.upstream_config['task'],
+                self.runner_config['datarc']['train_batch_size'],
+                self.runner_config['datarc']['sets'],
+                self.runner_config['datarc']['max_timestep'],
+            )
+        else:
+            dataset = LoadFairseqMFCCDataset(
+                self.upstream_config['task'],
+                self.runner_config['datarc']['train_batch_size'],
+                self.runner_config['datarc']['feat_dir'],
+                self.runner_config['datarc']['label_dir'],
+                self.runner_config['datarc']['split'],
+                self.runner_config['datarc']['mean_std_pth'],
+            )
         dataloader = DataLoader(
             dataset, 
             batch_size=1, # for bucketing
@@ -207,7 +213,7 @@ class Runner():
 
         while pbar.n < pbar.total:
             for data in tqdm(dataloader, dynamic_ncols=True, desc='train'):
-                first_accu = (backward_steps % gradient_accumulate_steps == 0)
+                first_accu = (backward_steps % gradient_accumulate_steps == 0) 
                 if self.args.mode in ['melhubert', 'distillation']:
                     # Save model for every x epochs in MelHuBERT pre-training mode
                     if (global_step % int(self.save_every_x_epochs * step_per_epoch) == 0) and first_accu:
@@ -307,7 +313,7 @@ class Runner():
                 # Save model at the last step
                 if pbar.n == pbar.total-1:
                     if self.args.mode in ['melhubert', 'distillation']:
-                        name = 'last-step,ckpt'
+                        name = 'last-step.ckpt'
                         self.mh_tools.save_model(optimizer, global_step, num_epoch, name=name)
                     elif self.args.mode == 'weight-pruning':
                         name = 'last-step.ckpt'

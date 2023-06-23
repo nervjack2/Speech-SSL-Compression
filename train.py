@@ -30,6 +30,7 @@ def get_args():
     parser.add_argument('--seed', default=1337, type=int)
     parser.add_argument('--device', default='cuda', help='model.to(device)')
     parser.add_argument('--multi_gpu', action='store_true', help='Enables multi-GPU training')
+    parser.add_argument('--load_fairseq_data', default=False, action='store_true', help='Load data from fairseq .npy data.')
 
     args = parser.parse_args()
     
