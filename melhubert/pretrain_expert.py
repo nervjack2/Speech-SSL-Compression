@@ -7,6 +7,8 @@ import yaml
 import torch
 import torch.nn as nn
 from model import MelHuBERTModel, MelHuBERTConfig
+from weight_pruning.wp_utils import get_params_to_prune
+from pytorch_code import prune
 
 class MelHuBERTPretrainer(nn.Module):
     def __init__(self, upstream_config, initial_weight=None, device='cuda', multi_gpu=False):
@@ -35,12 +37,19 @@ class MelHuBERTPretrainer(nn.Module):
 
         # Do initialization from a checkpoint if needed
         if self.initial_weight:
+            if "weight-pruning" in self.initial_weight:
+                # Initialize the pruning mask if needed 
+                params_to_prune, _ = get_params_to_prune(self.model)
+                prune.global_unstructured(
+                    params_to_prune,
+                    pruning_method=prune.Identity,
+                )
             all_states = torch.load(self.initial_weight, map_location="cpu")
             try:             
                 self.model.load_state_dict(all_states["model"])
                 print(f'[Pretrainer] Load initilization model weight from {self.initial_weight}')
             except:
-                raise NotImplementedError('Could not load the initilization weight')
+               raise NotImplementedError('Could not load the initilization weight')
 
     def load_model(self, init_ckpt):
         assert 'model' in init_ckpt
@@ -76,9 +85,9 @@ class MelHuBERTPretrainer(nn.Module):
 
         loss = 0.0 
         if logit_m != None and label_m != None and self.model_config.pred_masked_weight > 0: 
-            loss += self.model_config.pred_masked_weight * self.loss(logit_m, label_m)
+            loss += self.model_config.pred_masked_weight * self.loss(logit_m, label_m)      
         if logit_u != None and label_u != None and self.model_config.pred_nomask_weight > 0: 
             loss += self.model_config.pred_nomask_weight * self.loss(logit_u, label_u)
         
         return loss
-    
+        
