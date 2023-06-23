@@ -47,12 +47,20 @@ def get_params_to_prune(upstream, bias=True):
             
     return params_to_prune, name_filter
 
+    def _resume_random_state(state):
+        if state:
+            random.setstate(state['random'])
+            np.random.set_state(state['numpy'])
+            torch.set_rng_state(state['torch'])
+            torch.cuda.set_rng_state(state['torch.cuda'])
+
 class WeightPruningTools():
-    def __init__(self, args, runner_config, upstream_config, upstream):
+    def __init__(self, args, runner_config, upstream_config, upstream, initial_weight):
         self.args = args
         self.runner_config = runner_config
         self.upstream_config = upstream_config
         self.upstream = upstream
+        self.initial_weight = initial_weight
 
         self.prune_condition = self.runner_config["prune"]["pruning_condition"]
         self.prune_strategy = self.runner_config["prune"]["strategy"]
@@ -77,6 +85,23 @@ class WeightPruningTools():
         self.smooth_factor = self.runner_config['prune'].get('smooth_factor', 0.999)
         self.buffer_loss = [] 
         self.pruning_times = 0
+
+        params_to_prune, _ = get_params_to_prune(self.upstream.model)
+        prune.global_unstructured(
+            params_to_prune,
+            pruning_method=prune.Identity,
+        )
+
+        # Resume training 
+        if self.initial_weight:
+            all_states = torch.load(self.initial_weight, map_location="cpu")
+            if "Pruning" in all_states:
+                self.smooth_loss = all_states["Pruning"]["smooth_loss"]
+                self.tgt_smooth_loss = all_states["Pruning"]["tgt_smooth_loss"]
+                self.pruning_times = all_states["Pruning"]["pruning_times"]
+            if "RandomState" in all_states:
+                random_state = all_states["RandomState"]
+                _resume_random_state(random_state)
 
         print("="*40 + "\n[Weight Pruning] - Pruning-related hyperparameters:")
         print(f"Pruning iterations: {self.n_iters}")
@@ -106,7 +131,9 @@ class WeightPruningTools():
             return "not-converge"
         # Save checkpoint before pruning
         fname_prefix = "mask-" if prune.is_pruned(self.upstream.model) else ""
-        filename = f'{fname_prefix}before-pruning-states-{global_step}.ckpt'
+        # filename = f'{fname_prefix}before-pruning-states-{global_step}.ckpt'
+        cur_sparsity = 0 if self.pruning_times == 0 else self.sparsity[self.pruning_times-1]  
+        filename = f'{fname_prefix}before-pruning-states-{global_step}-sparsity-{cur_sparsity}.ckpt'
         self._save(optimizer, global_step, total_step, filename)
         # Pruning
         params_to_prune, name_filter = get_params_to_prune(self.upstream.model)
