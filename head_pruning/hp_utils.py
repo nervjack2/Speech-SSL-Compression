@@ -249,6 +249,7 @@ class HeadPruningTools():
             self.upstream.model.encoder.layers[layer].self_attn._set_need_intermediate(True)
         # Prepare data
         dataset = MelFeatDataset(
+            self.args.frame_period,
             self.upstream_config['task'],
             self.runner_config['datarc']['train_batch_size'],
             self.runner_config['datarc']['sets'],
