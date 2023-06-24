@@ -97,7 +97,7 @@ class MelHuBERTModel(nn.Module):
                 self.mask_emb = 0
 
         self.final_proj = nn.Linear(model_config.encoder_embed_dim, model_config.num_cluster)
-   
+
     def apply_mask(self, x, padding_mask, teacher_mask_indices):
         """
         teacher_mask_indices: only for distillation mode 
@@ -126,9 +126,6 @@ class MelHuBERTModel(nn.Module):
             mask_indices =  None
 
         return x, mask_indices
-
-    def adjust_arch(self, new_config):
-        self.final_proj = nn.Linear(self.model_config.encoder_embed_dim, new_config['num_cluster'])
 
     def forward(self, 
         feat, 
@@ -206,5 +203,5 @@ class MelHuBERTModel(nn.Module):
         else:
             logit_u = None
             label_u = None
-      
+        
         return hidden, logit_m, logit_u, label_m, label_u, layer_hiddens, pre_feat, mask_indices
