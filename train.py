@@ -31,9 +31,13 @@ def get_args():
     parser.add_argument('--device', default='cuda', help='model.to(device)')
     parser.add_argument('--multi_gpu', action='store_true', help='Enables multi-GPU training')
     parser.add_argument('--load_fairseq_data', default=False, action='store_true', help='Load data from fairseq .npy data.')
+    parser.add_argument('--multitask', default=False, action='store_true', help='Multitask learning')
 
     args = parser.parse_args()
-    
+    if args.multitask:
+        assert args.frame_period == 20, 'Multitask learning is only possible when the frame period is 20 ms.'
+        assert args.load_fairseq_data == True, 'Multitask learning is only available when the data is loading in fairseq format'
+
     os.makedirs(args.expdir, exist_ok=True)
     assert args.runner_config != None and args.upstream_config != None, 'Please specify .yaml config files.'
 

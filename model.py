@@ -60,11 +60,12 @@ class MelHuBERTConfig:
 
 class MelHuBERTModel(nn.Module):
 
-    def __init__(self, model_config: MelHuBERTConfig):
+    def __init__(self, model_config: MelHuBERTConfig, multitask=False):
         super().__init__()
 
         self.model_config = model_config
-        
+        self.multitask = multitask
+
         self.n_encoder_layers = model_config.encoder_layers
         print(
             f"[MelHuBERTModel] - Encoder layer = {self.n_encoder_layers}"
@@ -96,7 +97,11 @@ class MelHuBERTModel(nn.Module):
             else:
                 self.mask_emb = 0
 
-        self.final_proj = nn.Linear(model_config.encoder_embed_dim, model_config.num_cluster)
+        if not self.multitask:
+            self.final_proj = nn.Linear(model_config.encoder_embed_dim, model_config.num_cluster)
+        else:
+            self.final_proj_1 = nn.Linear(model_config.encoder_embed_dim, model_config.num_cluster)
+            self.final_proj_2 = nn.Linear(model_config.encoder_embed_dim, model_config.num_cluster)
 
     def apply_mask(self, x, padding_mask, teacher_mask_indices):
         """
@@ -185,21 +190,42 @@ class MelHuBERTModel(nn.Module):
             return hidden, None, None, None, None, layer_hiddens, pre_feat
 
         assert cluster_label != None
+        if self.multitask:
+            cluster_label_1 = cluster_label[0]
+            cluster_label_2 = cluster_label[1]
 
         if not self.model_config.skip_masked:
             masked_indices = torch.logical_and(pad_mask.bool(), mask_indices)
-            logit_m = self.final_proj(hidden[masked_indices])  # (num_masked, dim) -> (num_masked, num_cluster)
-            label_m = cluster_label[masked_indices]
-
+            if not self.multitask:
+                logit_m = self.final_proj(hidden[masked_indices])  # (num_masked, dim) -> (num_masked, num_cluster)
+            else: 
+                logit_m_1 = self.final_proj_1(hidden[masked_indices])
+                logit_m_2 = self.final_proj_2(hidden[masked_indices])
+                logit_m = torch.cat((logit_m_1, logit_m_2), 0)
+            if not self.multitask:
+                label_m = cluster_label[masked_indices]
+            else:
+                label_m_1 = cluster_label_1[masked_indices]
+                label_m_2 = cluster_label_2[masked_indices]
+                label_m = torch.cat((label_m_1, label_m_2), 0)
         else:
             logit_m = None
             label_m = None
 
         if not self.model_config.skip_nomask:
             nomask_indices = torch.logical_and(pad_mask.bool(), ~mask_indices)
-            logit_u = self.final_proj(hidden[nomask_indices])  # (num_unmask, dim) -> (num_unmask, num_cluster)
-            label_u = cluster_label[nomask_indices]
-        
+            if not self.multitask:
+                logit_u = self.final_proj(hidden[nomask_indices])  # (num_unmask, dim) -> (num_unmask, num_cluster)
+            else:
+                logit_u_1 = self.final_proj_1(hidden[nomask_indices])
+                logit_u_2 = self.final_proj_2(hidden[nomask_indices])
+                logit_u = torch.cat((logit_u_1, logit_u_2), 0)
+            if not self.multitask:
+                label_u = cluster_label[nomask_indices]
+            else:
+                label_u_1 = cluster_label_1[nomask_indices]
+                label_u_2 = cluster_label_2[nomask_indices]
+                label_u = torch.cat((label_u_1, label_u_2), 0)
         else:
             logit_u = None
             label_u = None

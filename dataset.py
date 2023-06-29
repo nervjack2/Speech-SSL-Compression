@@ -76,7 +76,7 @@ class FeatLabelDataset(Dataset):
 
 class MelFeatDataset(FeatLabelDataset):
     
-    def __init__(self, frame_period, task_config, bucket_size, sets, max_timestep=0):
+    def __init__(self, frame_period, task_config, bucket_size, sets, max_timestep=0, multitask=False):
         super(MelFeatDataset, self).__init__(task_config, bucket_size, sets, max_timestep)
         self.frame_period = frame_period
 
@@ -198,6 +198,12 @@ class FairseqFeatLabelDataset(Dataset):
         if len(x) < self.sample_length: return x, y
         idx = random.randint(0, len(x)-self.sample_length)
         return x[idx:idx+self.sample_length], y[idx:idx+self.sample_length]
+    
+    def _sample_multitask(self, x, y1, y2):
+        if self.sample_length <= 0: return x, y1, y2
+        if len(x) < self.sample_length: return x, y1, y2
+        idx = random.randint(0, len(x)-self.sample_length)
+        return x[idx:idx+self.sample_length], y1[idx:idx+self.sample_length], y2[idx:idx+self.sample_length]
 
     def __len__(self):
         return len(self.LEN)
@@ -207,49 +213,74 @@ class FairseqFeatLabelDataset(Dataset):
         items = items[0] 
         return items
 
-class LoadFairseqMFCCDataset(FairseqFeatLabelDataset):
-    def __init__(self, task_config, bucket_size, feat_dir, label_dir, split, mean_std_pth):
-        super(LoadFairseqMFCCDataset, self).__init__(task_config, bucket_size, feat_dir, label_dir, split)
+class LoadFairseqDataset(FairseqFeatLabelDataset):
+    def __init__(self, frame_period, task_config, bucket_size, feat_dir, label_dir, split, mean_std_pth, multitask=False):
+        super(LoadFairseqDataset, self).__init__(task_config, bucket_size, feat_dir, label_dir, split)
         mean_std = np.load(mean_std_pth)
         self.mean = mean_std[0].reshape(-1)
         self.std = mean_std[1].reshape(-1)
+        self.frame_period = frame_period
+        self.multitask = multitask
 
     def _load_feat(self, leng, offset):
         feat = self.feat[offset: offset + leng]
         feat = (feat-self.mean)/self.std
-
-        odd_feat = feat[::2,:]
-        even_feat = feat[1::2,:]
-        if odd_feat.shape[0] != even_feat.shape[0]:
-            even_feat = np.concatenate((even_feat, np.zeros((1,even_feat.shape[1]))), axis=0)
-        feat = np.concatenate((odd_feat, even_feat), axis=1)
+        if self.frame_period == 20:
+            odd_feat = feat[::2,:]
+            even_feat = feat[1::2,:]
+            if odd_feat.shape[0] != even_feat.shape[0]:
+                even_feat = np.concatenate((even_feat, np.zeros((1,even_feat.shape[1]))), axis=0)
+            feat = np.concatenate((odd_feat, even_feat), axis=1)
         return torch.FloatTensor(feat)
 
-    def _load_label(self, y):
+    def _load_label(self, y, feat_len):
         label = np.array(y)
         label_len = label.shape[0]
-        label = label[::2]
-        return torch.LongTensor(label)
+        if self.frame_period == 20 and feat_len != label_len:
+            if not self.multitask:
+                label = label[::2]
+                return torch.LongTensor(label)
+            else:
+                label_1 = label[::2]
+                label_2 = label[1::2]
+                if len(label_2) != len(label_1):
+                    label_2 = np.append(label_2, label_1[-1])
+                return torch.LongTensor(label_1), torch.LongTensor(label_2)
 
     def __getitem__(self, index):
         # Load acoustic feature, label and pad
-        x_batch, y_batch = [], []
+        if not self.multitask:
+            x_batch, y_batch = [], []
+        else:
+            x_batch, y1_batch, y2_batch = [], [], []
 
         for leng, offset, y in zip(self.LEN[index], self.OFFSET[index], self.Y[index]):
             feat = self._load_feat(leng, offset)
-            label = self._load_label(y)
-            x, y = self._sample(feat, label)
-            x_batch.append(x)
-            y_batch.append(y)
+            label = self._load_label(y, feat.shape[0])
+            if self.multitask:
+                label_1 = label[0]
+                label_2 = label[1]
+                x, y1, y2 = self._sample_multitask(feat, label_1, label_2)
+                x_batch.append(x)
+                y1_batch.append(y1)
+                y2_batch.append(y2)
+            else:
+                x, y = self._sample(feat, label)
+                x_batch.append(x)
+                y_batch.append(y)
 
         x_len = [len(x_b) for x_b in x_batch]
         x_pad_batch = pad_sequence(x_batch, batch_first=True)
-        # Pad -100 for ignore index
-        y_pad_batch = pad_sequence(y_batch, batch_first=True, padding_value=-100) 
-
-        pad_mask = torch.ones(x_pad_batch.shape[:-1])  # (batch_size, seq_len)
+        pad_mask = torch.ones(x_pad_batch.shape[:-1]) 
         # Zero vectors for padding dimension
         for idx in range(x_pad_batch.shape[0]):
             pad_mask[idx, x_len[idx]:] = 0
 
-        return x_pad_batch, y_pad_batch, pad_mask, x_len
+        if not self.multitask:
+            y_pad_batch = pad_sequence(y_batch, batch_first=True, padding_value=-100) 
+            return x_pad_batch, y_pad_batch, pad_mask, x_len
+        else: 
+            y1_pad_batch = pad_sequence(y1_batch, batch_first=True, padding_value=-100) 
+            y2_pad_batch = pad_sequence(y2_batch, batch_first=True, padding_value=-100) 
+            return x_pad_batch, y1_pad_batch, y2_pad_batch, pad_mask, x_len
+

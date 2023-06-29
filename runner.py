@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
-from dataset import MelFeatDataset, LoadFairseqMFCCDataset
+from dataset import MelFeatDataset, LoadFairseqDataset
 from pytorch_code import prune
 
 class Runner():
@@ -37,7 +37,8 @@ class Runner():
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
-                self.args.multi_gpu).to(self.args.device)
+                self.args.multi_gpu,
+                self.args.multitask).to(self.args.device)
             self.mh_tools = MelHuBERTTools(
                 self.args,
                 self.runner_config,
@@ -53,7 +54,8 @@ class Runner():
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
-                self.args.multi_gpu).to(self.args.device)
+                self.args.multi_gpu,
+                self.args.multitask).to(self.args.device)
             self.wp_tools = WeightPruningTools(
                 self.args,
                 self.runner_config,
@@ -74,7 +76,8 @@ class Runner():
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
-                self.args.multi_gpu).to(self.args.device)
+                self.args.multi_gpu,
+                self.args.multitask).to(self.args.device)
             self.hp_tools = HeadPruningTools(
                 self.args,
                 self.runner_config,
@@ -96,7 +99,8 @@ class Runner():
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
-                self.args.multi_gpu).to(self.args.device)
+                self.args.multi_gpu,
+                self.args.multitask).to(self.args.device)
             self.row_tools = RowPruningTools(
                 self.args,
                 self.runner_config,
@@ -118,7 +122,8 @@ class Runner():
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
-                self.args.multi_gpu).to(self.args.device)
+                self.args.multi_gpu,
+                self.args.multitask).to(self.args.device)
             self.mh_tools = MelHuBERTTools(
                 self.args,
                 self.runner_config,
@@ -152,15 +157,18 @@ class Runner():
                 self.runner_config['datarc']['train_batch_size'],
                 self.runner_config['datarc']['sets'],
                 self.runner_config['datarc']['max_timestep'],
+                self.args.multitask
             )
         else:
-            dataset = LoadFairseqMFCCDataset(
+            dataset = LoadFairseqDataset(
+                self.args.frame_period,
                 self.upstream_config['task'],
                 self.runner_config['datarc']['train_batch_size'],
                 self.runner_config['datarc']['feat_dir'],
                 self.runner_config['datarc']['label_dir'],
                 self.runner_config['datarc']['split'],
                 self.runner_config['datarc']['mean_std_pth'],
+                self.args.multitask
             )
         dataloader = DataLoader(
             dataset, 
@@ -317,7 +325,7 @@ class Runner():
                         self.mh_tools.save_model(optimizer, global_step, num_epoch, name=name)
                     elif self.args.mode == 'weight-pruning':
                         name = 'last-step.ckpt'
-                        self.wp_tools._save(optimizer, pbar.n, pbar.total, name=name)
+                        self.wp_tools._save(optimizer, pbar.n, pbar.total, filename=name)
                     elif self.args.mode == 'head-pruning':
                         self.hp_tools.save_model(optimizer, global_step)
                     elif self.args.mode == 'row-pruning':
