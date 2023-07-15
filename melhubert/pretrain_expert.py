@@ -30,6 +30,7 @@ class MelHuBERTPretrainer(nn.Module):
             self.model = torch.nn.DataParallel(self.model)
             print('[Pretrainer] - Multi-GPU training Enabled: ' + str(torch.cuda.device_count()))
         print('[Pretrainer] - Number of parameters: ' + str(sum(p.numel() for p in self.model.parameters() if p.requires_grad)))
+        self.pruned_heads = None
 
     def _init_model(self):
         print('[Pretrainer] - Initializing model...')
