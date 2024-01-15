@@ -91,7 +91,10 @@ def main():
     
     # Load upstream model 
     all_states = torch.load(args.checkpoint, map_location="cpu")
-    upstream_config = all_states["Upstream_Config"]["melhubert"]  
+    if "melhubert" in all_states["Upstream_Config"]:
+        upstream_config = all_states["Upstream_Config"]["melhubert"]
+    else:
+        upstream_config = all_states["Upstream_Config"]["hubert"]
     upstream_config = MelHuBERTConfig(upstream_config)
     upstream_model = MelHuBERTModel(upstream_config).to(args.device)
     state_dict = all_states["model"]
