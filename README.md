@@ -5,14 +5,16 @@ This is the official implementation of:
 We support four diffrent type of compression on a transformer-based speech SSL model (MelHuBERT), including weight pruning, head pruning, low-rank approximation, and knowledge distillation.
 
 ## Data Preparing
-First, please execute the following command to prepare LibriSpeech 360 horus and paired cluster labels (K-means on log Mel feature)
+1. Download [dataset](https://drive.google.com/file/d/1hMvXA7VxtcIa6gd0-nPWYCho5qLmeKFL/view?usp=sharing).
+2. Please execute the following command to prepare LibriSpeech 960 horus and paired cluster labels
 ```
-bash preprocess.sh [DATA_DIR]
+bash preprocess.sh [DATA_ZIP_FILE] [DATA_OUT_DIR]
 ```
+Note: Please use absolute path here.
 
-Then, please adjust **datarc.sets** in config_runner.yaml to [ DATA_DIR/libri-360-data-cluster-pair.csv ]
+Then, please adjust **datarc.sets** in config_runner.yaml to [ DATA_OUT_DIR/libri960-stg2-{FRAME_PERIOD}.csv ]
 
-The mean and std of LibriSpeech 360 hours is saved at DATA_DIR/mean-std.npy
+The mean and std of LibriSpeech 960 hours is saved at DATA_OUT_DIR/mean-std.npy
 
 ## Training Command 
 <!-- ### Pre-training MelHuBERT from scratch
