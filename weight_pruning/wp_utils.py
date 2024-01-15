@@ -68,6 +68,7 @@ class WeightPruningTools():
         self.n_iters = self.runner_config["prune"].get("n_iters", 38)
         self.warnup = self.runner_config["prune"].get("warnup", 25000)
         self.period = self.runner_config["prune"].get("period", 25000)
+        assert self.warnup > 0 and self.period > 0, f"Do not set warnup and period to 0."
         self.avg_len = self.runner_config["prune"].get("average_length", 15000)
         self.con_tol = self.runner_config["prune"].get("converge_loss_tolerance", 0.001)
         # Setup pruning sparsity
