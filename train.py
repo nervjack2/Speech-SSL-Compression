@@ -21,7 +21,7 @@ def get_args():
     parser.add_argument('-c', '--runner_config', help='The yaml file for configuring the whole experiment, except the upstream model')
     parser.add_argument('-g', '--upstream_config', help='The yaml file for the upstream model')
     parser.add_argument('-n', '--expdir', help='Save experiment at this path')
-    parser.add_argument('-m', '--mode', choices=['melhubert', 'weight-pruning', 'head-pruning', 'row-pruning', 'distillation']
+    parser.add_argument('-m', '--mode', choices=['weight-pruning', 'head-pruning', 'row-pruning', 'distillation']
                                                 , help='Different mode of training')
     parser.add_argument('-f', '--frame_period', default=20, choices=[10,20], type=int)
     # Options
@@ -30,13 +30,8 @@ def get_args():
     parser.add_argument('--seed', default=1337, type=int)
     parser.add_argument('--device', default='cuda', help='model.to(device)')
     parser.add_argument('--multi_gpu', action='store_true', help='Enables multi-GPU training')
-    parser.add_argument('--load_fairseq_data', default=False, action='store_true', help='Load data from fairseq .npy data.')
-    parser.add_argument('--multitask', default=False, action='store_true', help='Multitask learning')
 
     args = parser.parse_args()
-    if args.multitask:
-        assert args.frame_period == 20, 'Multitask learning is only possible when the frame period is 20 ms.'
-        assert args.load_fairseq_data == True, 'Multitask learning is only available when the data is loading in fairseq format'
 
     os.makedirs(args.expdir, exist_ok=True)
     assert args.runner_config != None and args.upstream_config != None, 'Please specify .yaml config files.'

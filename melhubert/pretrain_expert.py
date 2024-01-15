@@ -11,13 +11,12 @@ from weight_pruning.wp_utils import get_params_to_prune
 from pytorch_code import prune
 
 class MelHuBERTPretrainer(nn.Module):
-    def __init__(self, upstream_config, initial_weight=None, device='cuda', multi_gpu=False, multitask=False):
+    def __init__(self, upstream_config, initial_weight=None, device='cuda', multi_gpu=False):
         super(MelHuBERTPretrainer, self).__init__()
 
         self.initial_weight = initial_weight
         self.device = device
         self.multi_gpu = multi_gpu
-        self.multitask = multitask
 
         self.upstream_config = upstream_config
         # Initialize the model 
@@ -35,7 +34,7 @@ class MelHuBERTPretrainer(nn.Module):
     def _init_model(self):
         print('[Pretrainer] - Initializing model...')
         self.model_config = MelHuBERTConfig(self.upstream_config['melhubert'])
-        self.model = MelHuBERTModel(self.model_config, self.multitask)
+        self.model = MelHuBERTModel(self.model_config)
 
         # Do initialization from a checkpoint if needed
         if self.initial_weight:
@@ -105,14 +104,8 @@ class MelHuBERTPretrainer(nn.Module):
         Return:
             loss        
         """
-        if not self.multitask:
-            audio_feat, label, pad_mask, audio_len = data[0], data[1], data[2], data[3]
-            label = label.to(self.device)
-        else:
-            audio_feat, label_1, label_2, pad_mask, audio_len = data[0], data[1], data[2], data[3], data[4]
-            label_1 = label_1.to(self.device)
-            label_2 = label_2.to(self.device)
-            label = [label_1, label_2]
+        audio_feat, label, pad_mask, audio_len = data[0], data[1], data[2], data[3]
+        label = label.to(self.device)
        
         audio_feat = audio_feat.to(self.device)
         pad_mask = pad_mask.to(self.device)

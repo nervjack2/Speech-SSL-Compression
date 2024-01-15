@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
-from dataset import MelFeatDataset, LoadFairseqDataset
+from dataset import MelFeatDataset
 from pytorch_code import prune
 
 class Runner():
@@ -24,9 +24,9 @@ class Runner():
         self.upstream_config = yaml.load(open(self.args.upstream_config, 'r'), Loader=yaml.FullLoader)
 
         # Assert the dimension of input projection layer
-        if self.args.frame_period == 20 and not self.args.load_fairseq_data:
+        if self.args.frame_period == 20:
             assert self.upstream_config['melhubert']['feat_emb_dim'] == 80, f'Feature embedding dimension should be {80} when the frame period is {20}'
-        elif self.args.frame_period == 10 and not self.args.load_fairseq_data:
+        elif self.args.frame_period == 10:
             assert self.upstream_config['melhubert']['feat_emb_dim'] == 40, f'Feature embedding dimension should be {40} when the frame period is {10}'
         # Mode of pre-training
         if args.mode == 'melhubert':
@@ -37,8 +37,7 @@ class Runner():
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
-                self.args.multi_gpu,
-                self.args.multitask).to(self.args.device)
+                self.args.multi_gpu,).to(self.args.device)
             self.mh_tools = MelHuBERTTools(
                 self.args,
                 self.runner_config,
@@ -54,8 +53,7 @@ class Runner():
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
-                self.args.multi_gpu,
-                self.args.multitask).to(self.args.device)
+                self.args.multi_gpu,).to(self.args.device)
             self.wp_tools = WeightPruningTools(
                 self.args,
                 self.runner_config,
@@ -76,8 +74,7 @@ class Runner():
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
-                self.args.multi_gpu,
-                self.args.multitask).to(self.args.device)
+                self.args.multi_gpu,).to(self.args.device)
             self.hp_tools = HeadPruningTools(
                 self.args,
                 self.runner_config,
@@ -99,8 +96,7 @@ class Runner():
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
-                self.args.multi_gpu,
-                self.args.multitask).to(self.args.device)
+                self.args.multi_gpu,).to(self.args.device)
             self.row_tools = RowPruningTools(
                 self.args,
                 self.runner_config,
@@ -122,8 +118,7 @@ class Runner():
                 self.upstream_config,
                 self.args.initial_weight,
                 self.args.device,
-                self.args.multi_gpu,
-                self.args.multitask).to(self.args.device)
+                self.args.multi_gpu,).to(self.args.device)
             self.mh_tools = MelHuBERTTools(
                 self.args,
                 self.runner_config,
@@ -150,26 +145,13 @@ class Runner():
         return optimizer
 
     def _get_dataloader(self,):
-        if not self.args.load_fairseq_data:
-            dataset = MelFeatDataset(
-                self.args.frame_period,
-                self.upstream_config['task'],
-                self.runner_config['datarc']['train_batch_size'],
-                self.runner_config['datarc']['sets'],
-                self.runner_config['datarc']['max_timestep'],
-                self.args.multitask
-            )
-        else:
-            dataset = LoadFairseqDataset(
-                self.args.frame_period,
-                self.upstream_config['task'],
-                self.runner_config['datarc']['train_batch_size'],
-                self.runner_config['datarc']['feat_dir'],
-                self.runner_config['datarc']['label_dir'],
-                self.runner_config['datarc']['split'],
-                self.runner_config['datarc']['mean_std_pth'],
-                self.args.multitask
-            )
+        dataset = MelFeatDataset(
+            self.args.frame_period,
+            self.upstream_config['task'],
+            self.runner_config['datarc']['train_batch_size'],
+            self.runner_config['datarc']['sets'],
+            self.runner_config['datarc']['max_timestep'],
+        )
         dataloader = DataLoader(
             dataset, 
             batch_size=1, # for bucketing

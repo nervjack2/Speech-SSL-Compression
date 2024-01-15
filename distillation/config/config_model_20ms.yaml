@@ -91,4 +91,4 @@ task:
 loss_param:
   T: 1         # temparature when doing KL
   alpha: 1     # ratio of hard label loss and KL. 1 means no hard label loss.
-  type: nomask # masked or nomasked
+  type: nomasked # masked or nomasked
