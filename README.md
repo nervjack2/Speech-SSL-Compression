@@ -1,5 +1,5 @@
 # Speech Self-Supervised Model Compression
-This is the official implementation of this two papers:
+This is the official implementation of:
 - [Compressing Transformer-based self-supervised models for speech processing](https://arxiv.org/abs/2211.09949)
 
 We support four diffrent type of compression on a transformer-based speech SSL model (MelHuBERT), including weight pruning, head pruning, low-rank approximation, and knowledge distillation.
