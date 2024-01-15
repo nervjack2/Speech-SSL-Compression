@@ -40,8 +40,7 @@ class MelHuBERTPretrainer(nn.Module):
         # Do initialization from a checkpoint if needed
         if self.initial_weight:
             all_states = torch.load(self.initial_weight, map_location="cpu")
-            loaded_mode = all_states['Args'].mode
-        
+
             # If the attention heads have been pruned 
             if 'Pruned_heads' in all_states:
                 self.pruned_heads = all_states["Pruned_heads"]
