@@ -135,6 +135,7 @@ def main():
                 layer.self_attn.skip_embed_dim_check = True
                 layer.self_attn.reset_parameters()
         upstream_model.load_state_dict(state_dict)
+        upstream_model.to(args.device)
     else:
         print(f'Currently not support {args.mode} mode')
     
