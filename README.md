@@ -15,14 +15,14 @@ Then, please adjust **datarc.sets** in config_runner.yaml to [ DATA_DIR/libri-36
 The mean and std of LibriSpeech 360 hours is saved at DATA_DIR/mean-std.npy
 
 ## Training Command 
-### Pre-training MelHuBERT from scratch
+<!-- ### Pre-training MelHuBERT from scratch
 Execute the following command to pretrain MelHuBERT from scratch with default configuration
 ```
 python3 train.py -m melhubert -g ./melhubert/config/config_model.yaml -c ./melhubert/config/config_runner.yaml -n EXP_DIR_PATH 
 ```
 -g: Model config \
 -c: Runner config \
--n: The model checkpoints, log file, and the pre-training config you used will be saved at this directory 
+-n: The model checkpoints, log file, and the pre-training config you used will be saved at this directory  -->
 
 ### Weight Pruning
 Execute the following command to do weight pruning on a pre-trained MelHuBERT. 
