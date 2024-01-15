@@ -28,13 +28,14 @@ python3 train.py -m melhubert -g ./melhubert/config/config_model.yaml -c ./melhu
 Execute the following command to do weight pruning on a pre-trained MelHuBERT. 
 
 ```
-python3 train.py  -m weight-pruning -i Path/to/CkptFile -g ./weight_pruning/config/config_model.yaml -c ./weight_pruning/config/config_runner.yaml -n EXP_DIR_PATH
+python3 train.py  -m weight-pruning -i Path/to/CkptFile -g ./weight_pruning/config/config_model_{FRAME_PERIOD}.yaml -c ./weight_pruning/config/config_runner_{FRAME_PERIOD}.yaml -n EXP_DIR_PATH -f FRAME_PERIOD
 ```
 
 -i: Pre-trained MelHuBERT will be loaded from this .ckpt file \
 -g: model config \
 -c: runner config \
--n: The model checkpoints, log file, and pre-training config you used will be saved at this directory
+-n: The model checkpoints, log file, and pre-training config you used will be saved at this directory \
+-f: Frame period
 
 ### Head Pruning
 Execute the following command to do head pruning on a pre-trained MelHuBERT. 
@@ -42,47 +43,56 @@ There are two metric for head pruning, l1 and data-driven.
 
 For l1 metric, please execute
 ```
-python3 train.py  -m head-pruning -i Path/to/CkptFile -g ./head_pruning/config/l1/config_model.yaml -c ./head_pruning/config/l1/config_runner.yaml -n EXP_DIR_PATH
+python3 train.py  -m head-pruning -i Path/to/CkptFile -g ./head_pruning/config/l1/config_model_{FRAME_PERIOD}.yaml -c ./head_pruning/config/l1/config_runner_{FRAME_PERIOD}.yaml -n EXP_DIR_PATH -f FRAME_PERIOD
 ```
 For data-driven metric, please execute
 ```
-python3 train.py -m head-pruning -i Path/to/CkptFile -g ./head_pruning/config/data_driven/config_model.yaml -c ./head_pruning/config/data_driven/config_runner.yaml -n EXP_DIR_PATH 
+python3 train.py -m head-pruning -i Path/to/CkptFile -g ./head_pruning/config/data_driven/config_model_{FRAME_PERIOD}.yaml -c ./head_pruning/config/data_driven/config_runner_{FRAME_PERIOD}.yaml -n EXP_DIR_PATH -f FRAME_PERIOD
 ```
-
+<!-- 
 -i: Pre-trained MelHuBERT will be loaded from this .ckpt file \
 -g: model config \
 -c: runner config \
--n: The model checkpoints, log file, and pre-training config you used will be saved at this directory
+-n: The model checkpoints, log file, and pre-training config you used will be saved at this directory -->
+
+### Row Pruning 
+Execute the following command to do row pruning on a pre-trained MelHuBERT.
+
+Please execute
+```
+python3 train.py  -m row-pruning -i Path/to/CkptFile -g ./row_pruning/config/config_model_{FRAME_PERIOD}.yaml -c ./row_pruning/config/config_runner_{FRAME_PERIOD}.yaml -n EXP_DIR_PATH -f FRAME_PERIOD
+```
 
 ### Distillation 
 Execute the following command to do knowledge distillation on a pre-trained MelHuBERT teacher. 
 
 Please execute
 ```
-python3 train.py  -m distillation -i Path/to/CkptFile -g ./distillation/config/config_model.yaml -c ./distillation/config/config_runner.yaml -n EXP_DIR_PATH
+python3 train.py  -m distillation -i Path/to/CkptFile -g ./distillation/config/config_model_{FRAME_PERIOD}.yaml -c ./distillation/config/config_runner_{FRAME_PERIOD}.yaml -n EXP_DIR_PATH -f FRAME_PERIOD
 ```
 
--i: Pre-trained MelHuBERT will be loaded from this .ckpt file \
+<!-- -i: Pre-trained MelHuBERT will be loaded from this .ckpt file \
 -g: model config \
 -c: runner config \
--n: The model checkpoints, log file, and pre-training config you used will be saved at this directory
-
+-n: The model checkpoints, log file, and pre-training config you used will be saved at this directory -->
+<!-- 
 Choosing between "masked" and "nomasked" for **loss_param.type** in config_model.yaml. \
-This parameter controls whether the input would be randomly masked.
+This parameter controls whether the input would be randomly masked. -->
 
 ## Pretrained Models 
-Please execute the following command to download the pretrained MelHuBERT 
-```
-wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=10r8tC-KRwHs83OU4-UGYfshZDUsy9erS' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=10r8tC-KRwHs83OU4-UGYfshZDUsy9erS" -O melhubert-libri360-20fp.ckpt && rm -rf /tmp/cookies.txt
-```
+- [MelHuBERT-960h-10ms](https://drive.google.com/file/d/18u2u-528uDh5T7R1bp1wvWJ2ygcrNlzx/view?usp=sharing)
+- [MelHuBERT-960h-20ms](https://drive.google.com/file/d/1Fn_C5VoH5iV3LdvBEjvfAsbMPhWFFPdd/view?usp=sharing)
+
 ## Extracting feature 
 Please execute the following command to extract feature from two example waveforms
 ```
-python3 extract_feature.py -m [MODE] -c [CHECKPOINT]
+python3 extract_feature.py -m MODE -c CHECKPOINT -f FRAME_PERIOD -d DATASET_SIZE
 ```
 
 -m: Choose from melhubert, weight-pruning, head-pruning, row-pruning, and distillation \
--c: Model checkpoint path
+-c: Model checkpoint path \
+-f: Frame period \
+-d: Pre-training size of dataset (360 or 960)
 
 ## Acknowledgement 
-Our implementation of pre-training interface is based on [S3PRL toolkit](https://github.com/s3prl/s3prl)
+Our implementation of pre-training interface is based on [S3PRL toolkit](https://github.com/s3prl/s3prl) (Shu-wen Yang, Andy T. Liu)

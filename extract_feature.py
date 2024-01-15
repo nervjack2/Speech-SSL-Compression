@@ -17,7 +17,6 @@ def get_args():
                                                 , help='Different mode of inference')
     parser.add_argument('-c', '--checkpoint', help='Path to model checkpoint')
     parser.add_argument('-f', '--fp', type=int, help='frame period', default=20)
-    parser.add_argument('-s', '--stage', type=int, help='number of pre-training stages', default=1, choices=[1,2])
     parser.add_argument('-d', '--hours', type=int, choices=[360, 960])
     parser.add_argument('--device', default='cuda', help='model.to(device)')
     args = parser.parse_args()
@@ -72,17 +71,6 @@ def prepare_data(wav_path, fp=20, hours=360):
 
     return mel_input, mel_len, pad_mask
 
-def load_cluster_label(cluster_path, mel_len, fp=20):
-    cluster = []
-    for p, l in zip(cluster_path, mel_len):
-        c = np.load(p)
-        c_len = c.shape[0]
-        if fp == 20 and c_len != l:
-            c = c[::2]
-        cluster.append(torch.LongTensor(c))
-    cluster = pad_sequence(cluster, batch_first=True, padding_value=-100) 
-    return cluster
-
 def main():
     args = get_args()
     print(f'[Extractor] - Extracting feature with {args.mode} mode')
@@ -100,34 +88,6 @@ def main():
     pad_mask = torch.FloatTensor(pad_mask).to( 
         device=args.device, dtype=torch.float32
     )  
-
-    # Load cluster label 
-    #if args.hours == 360:
-    #    if args.stage == 1:
-    #        cluster_path = [
-    #            './example/100-121669-0000.npy',
-    #            './example/1001-134707-0000.npy'
-    #        ]
-    #    elif args.stage == 2:
-    #        if args.fp == 10:
-    #            cluster_path = [
-    #                './example/100-121669-0000-stage2-10ms.npy',
-    #                './example/1001-134707-0000-stage2-10ms.npy'
-    #            ]
-    #        elif args.fp == 20:
-    #            cluster_path = [
-    #                './example/100-121669-0000-stage2-20ms.npy',
-    #                './example/1001-134707-0000-stage2-20ms.npy'
-    #            ]
-    #else:
-    #    cluster_path = [
-    #        './example/100-121669-0000-stage2-20ms-960h.npy',
-    #        './example/1001-134707-0000-stage2-20ms-960h.npy'
-    #    ]
-
-    #cluster = load_cluster_label(cluster_path, mel_len, args.fp).to(
-    #    device=args.device, dtype=torch.long
-    #)
     
     # Load upstream model 
     all_states = torch.load(args.checkpoint, map_location="cpu")
@@ -180,13 +140,9 @@ def main():
 
     with torch.no_grad():
         out = upstream_model(mel_input, pad_mask, get_hidden=True, no_pred=True)
-        #out = upstream_model(mel_input, pad_mask, cluster, mask=True, no_pred=False)
-    #loss = torch.nn.functional.cross_entropy(out[1], out[3])
-    #print(loss)
-    #exit(0)
+
     last_layer_feat, hidden_states = out[0], out[5]
     print(f'[Extractor] - Feature with shape of {last_layer_feat.shape} is extracted')
-    
 
 if __name__ == '__main__':
     main()

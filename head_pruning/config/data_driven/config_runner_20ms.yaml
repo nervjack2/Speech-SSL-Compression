@@ -3,7 +3,7 @@ runner:
   total_steps: 366000
   gradient_clipping: 10.0
   gradient_accumulate_steps: 1
- 
+
   log_step: 500
 
 optimizer:
@@ -26,11 +26,11 @@ prune:
   # Score
   # 1. data-driven
   # 2. l1 
-  target: by_layer
-  metric: l1
+  target: by_whole
+  metric: data-driven
   total_steps: 11 #total pruning steps
   num_heads_each_step: 12 # only for by_whole
   interval: [0, 25000, 50000, 75000, 100000, 125000, 165000, 205000, 245000, 285000, 325000]
   warm_up: 1000
-  data_ratio: 0.25 # only used when metric is data-driven
+  data_ratio: 0.25
   normalize_by_layer: 2 # normalize data-drive grad by k-norm 

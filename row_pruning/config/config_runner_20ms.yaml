@@ -1,7 +1,6 @@
 runner:
   n_epochs: -1
   total_steps: 510000
-  # total_steps: 26
   gradient_clipping: 10.0
   gradient_accumulate_steps: 1
  
@@ -24,6 +23,4 @@ prune:
   num_rows_each_step: 128
   interval: [0, 25000, 50000, 75000, 100000, 125000, 150000, 175000, 200000, 
               225000, 250000, 275000, 300000, 325000, 350000, 375000, 400000, 425000, 450000, 475000]
-  # interval: [1, 6, 11, 16, 21]
   warm_up: 1000
-  # warm_up: 1

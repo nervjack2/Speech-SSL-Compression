@@ -1,0 +1,94 @@
+melhubert:
+  initial_from_teacher: False
+  # Input feature dimension 
+  feat_emb_dim: 40
+
+  # Positional embedding type
+  pos_emb_type: conv                                  # Options: ["conv"]. The original implementation in HuBERT is "conv".
+  pos_conv_depth: 1
+  conv_pos: 128
+  conv_pos_groups: 16
+
+  # Transformer encoder
+  encoder_layers: 6
+  encoder_embed_dim: 768
+  encoder_ffn_embed_dim: 3072
+  encoder_attention_heads: 12
+  activation_fn: gelu
+  layer_norm_first: False
+  attention_type: original
+  
+  # Output dimension 
+  num_cluster: 512 
+
+  # Criterion
+  skip_masked: False
+  skip_nomask: False
+
+  # Masking config
+  mask_prob: 0.70  
+  mask_length: 10
+  mask_selection: 'static'
+  mask_other: 0.0
+  no_mask_overlap: False
+  mask_min_space: 1
+
+  learnable_mask_emb: False
+  mask_before_proj: True
+  
+  # Dropout
+  dropout: 0.1
+  attention_dropout: 0.1
+  activation_dropout: 0.1
+  encoder_layerdrop: 0.0
+
+teacher:
+  # Input feature dimension 
+  feat_emb_dim: 40
+
+  # Positional embedding type
+  pos_emb_type: conv                                  # Options: ["conv"]. The original implementation in HuBERT is "conv".
+  pos_conv_depth: 1
+  conv_pos: 128
+  conv_pos_groups: 16
+
+  # Transformer encoder
+  encoder_layers: 12
+  encoder_embed_dim: 768
+  encoder_ffn_embed_dim: 3072
+  encoder_attention_heads: 12
+  activation_fn: gelu
+  layer_norm_first: False
+  attention_type: original
+  
+  # Output dimension 
+  num_cluster: 512 
+
+  # Criterion
+  skip_masked: False
+  skip_nomask: False
+
+  # Masking config
+  mask_prob: 0.70  
+  mask_length: 10
+  mask_selection: 'static'
+  mask_other: 0.0
+  no_mask_overlap: False
+  mask_min_space: 1
+
+  learnable_mask_emb: False
+  mask_before_proj: True
+  
+  # Dropout
+  dropout: 0.1
+  attention_dropout: 0.1
+  activation_dropout: 0.1
+  encoder_layerdrop: 0.0
+
+task:
+  sequence_length: 1500
+
+loss_param:
+  T: 1         # temparature when doing KL
+  alpha: 1     # ratio of hard label loss and KL. 1 means no hard label loss.
+  type: nomask # masked or nomasked
