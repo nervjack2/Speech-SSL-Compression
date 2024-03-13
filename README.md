@@ -82,6 +82,8 @@ Choosing between "masked" and "nomasked" for **loss_param.type** in config_model
 This parameter controls whether the input would be randomly masked. -->
 
 ## Pretrained Models 
+*Notes: Due to computational resource limitations, these MelHuBERT models were trained with a batch size of 32. Therefore, they cannot be fairly compared with fairseq's HuBERT Base, which was trained with much larger batch size.*
+
 - [MelHuBERT-960h-10ms](https://drive.google.com/file/d/18u2u-528uDh5T7R1bp1wvWJ2ygcrNlzx/view?usp=sharing)
 - [MelHuBERT-960h-20ms](https://drive.google.com/file/d/1Fn_C5VoH5iV3LdvBEjvfAsbMPhWFFPdd/view?usp=sharing)
 
